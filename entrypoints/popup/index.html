@@ -3,9 +3,37 @@
   <head>
     <meta charset="UTF-8" />
     <title>Manent</title>
+    <style>
+      body { min-width: 320px; font-family: sans-serif; }
+      input, textarea, button { display: block; width: 100%; margin: 4px 0; box-sizing: border-box; }
+      .error { color: red; }
+      [hidden] { display: none; }
+    </style>
   </head>
   <body>
-    <div id="app"></div>
+    <section id="login" hidden>
+      <h2>Login</h2>
+      <label for="login-key">Private key (nsec, hex or ncryptsec)</label>
+      <input id="login-key" type="password" autocomplete="off" />
+      <label for="login-password">Password (optional, encrypts the key)</label>
+      <input id="login-password" type="password" autocomplete="off" />
+      <button id="login-btn">Login</button>
+      <p id="login-error" class="error" role="alert"></p>
+    </section>
+
+    <section id="unlock" hidden>
+      <h2>Unlock</h2>
+      <label for="unlock-password">Password</label>
+      <input id="unlock-password" type="password" autocomplete="off" />
+      <button id="unlock-btn">Unlock</button>
+      <p id="unlock-error" class="error" role="alert"></p>
+    </section>
+
+    <section id="main" hidden>
+      <p id="whoami"></p>
+      <button id="logout-btn">Logout</button>
+    </section>
+
     <script type="module" src="./main.ts"></script>
   </body>
 </html>
