@@ -1,0 +1,23 @@
+{
+  "name": "manent-extension",
+  "description": "Save web content as Manent notes",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "wxt",
+    "dev:firefox": "wxt -b firefox",
+    "build": "wxt build",
+    "build:firefox": "wxt build -b firefox",
+    "zip": "wxt zip",
+    "zip:firefox": "wxt zip -b firefox",
+    "postinstall": "wxt prepare"
+  },
+  "dependencies": {
+    "nostr-tools": "^2.23.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.0",
+    "wxt": "^0.20.0"
+  }
+}
