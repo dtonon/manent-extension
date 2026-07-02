@@ -5,7 +5,9 @@
     <title>Manent</title>
     <style>
       body { min-width: 320px; font-family: sans-serif; }
-      input, textarea, button { display: block; width: 100%; margin: 4px 0; box-sizing: border-box; }
+      input[type='password'], input[type='text'], textarea, button {
+        display: block; width: 100%; margin: 4px 0; box-sizing: border-box;
+      }
       .error { color: red; }
       [hidden] { display: none; }
     </style>
@@ -31,6 +33,13 @@
     </section>
 
     <section id="main" hidden>
+      <p id="tab-info"></p>
+      <label for="comment">Comment (optional)</label>
+      <textarea id="comment" rows="3"></textarea>
+      <label><input type="checkbox" id="sensitive" /> Sensitive</label>
+      <button id="save-btn">Save current page</button>
+      <p id="save-status" role="status"></p>
+      <hr />
       <p id="whoami"></p>
       <button id="logout-btn">Logout</button>
     </section>

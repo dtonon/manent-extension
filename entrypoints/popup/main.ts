@@ -3,9 +3,13 @@ import { loginWithKey, unlock, logout } from '@/utils/auth';
 import { loginWithNip07 } from '@/utils/nip07';
 import { getSignerState } from '@/utils/signer';
 import { refreshWriteRelays } from '@/utils/relays';
+import { formatCapture } from '@/utils/manent';
+import { saveNote } from '@/utils/save';
 
 const $ = (id: string) => document.getElementById(id)!;
 const input = (id: string) => $(id) as HTMLInputElement;
+
+let currentTab: { title?: string; url?: string } = {};
 
 async function render() {
   const state = await getSignerState();
@@ -14,6 +18,11 @@ async function render() {
   $('main').hidden = state.status !== 'ready';
   if (state.status === 'ready') {
     $('whoami').textContent = nip19.npubEncode(state.account.pubkey);
+    const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
+    currentTab = { title: tab?.title, url: tab?.url };
+    $('tab-info').textContent = currentTab.url
+      ? `${currentTab.title ?? ''}\n${currentTab.url}`
+      : 'No page to save';
   }
 }
 
@@ -49,6 +58,28 @@ $('unlock-btn').addEventListener('click', async () => {
     await render();
   } catch {
     $('unlock-error').textContent = 'Wrong password';
+  }
+});
+
+$('save-btn').addEventListener('click', async () => {
+  const btn = $('save-btn') as HTMLButtonElement;
+  const status = $('save-status');
+  if (!currentTab.url) return;
+  const text = formatCapture({
+    comment: input('comment').value,
+    title: currentTab.title,
+    url: currentTab.url,
+  });
+  btn.disabled = true;
+  status.textContent = 'Saving…';
+  try {
+    await saveNote(text, input('sensitive').checked);
+    input('comment').value = '';
+    status.textContent = 'Saved';
+  } catch (e) {
+    status.textContent = e instanceof Error ? e.message : String(e);
+  } finally {
+    btn.disabled = false;
   }
 });
 

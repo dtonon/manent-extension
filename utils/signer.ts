@@ -3,6 +3,7 @@ import type { Event, EventTemplate } from 'nostr-tools/pure';
 import * as nip44 from 'nostr-tools/nip44';
 import { getAccount, getPrivkey } from './auth';
 import type { Account } from './auth';
+import { Nip07Signer } from './nip07';
 
 export interface Signer {
   getPublicKey(): Promise<string>;
@@ -40,6 +41,5 @@ export async function getSignerState(): Promise<SignerState> {
     if (!sk) return { status: 'locked', account };
     return { status: 'ready', account, signer: new LocalSigner(sk) };
   }
-  const { Nip07Signer } = await import('./nip07');
   return { status: 'ready', account, signer: new Nip07Signer() };
 }
