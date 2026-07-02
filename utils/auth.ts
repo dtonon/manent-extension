@@ -21,7 +21,7 @@ export async function getAccount(): Promise<Account | null> {
   return (stored[ACCOUNT_KEY] as Account | undefined) ?? null;
 }
 
-async function setAccount(account: Account): Promise<void> {
+export async function setAccount(account: Account): Promise<void> {
   await browser.storage.local.set({ [ACCOUNT_KEY]: account });
 }
 

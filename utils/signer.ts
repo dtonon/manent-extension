@@ -40,5 +40,6 @@ export async function getSignerState(): Promise<SignerState> {
     if (!sk) return { status: 'locked', account };
     return { status: 'ready', account, signer: new LocalSigner(sk) };
   }
-  return { status: 'none' };
+  const { Nip07Signer } = await import('./nip07');
+  return { status: 'ready', account, signer: new Nip07Signer() };
 }

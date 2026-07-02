@@ -1,5 +1,6 @@
 import * as nip19 from 'nostr-tools/nip19';
 import { loginWithKey, unlock, logout } from '@/utils/auth';
+import { loginWithNip07 } from '@/utils/nip07';
 import { getSignerState } from '@/utils/signer';
 import { refreshWriteRelays } from '@/utils/relays';
 
@@ -22,6 +23,17 @@ $('login-btn').addEventListener('click', async () => {
     const account = await loginWithKey(input('login-key').value, input('login-password').value);
     input('login-key').value = '';
     input('login-password').value = '';
+    refreshWriteRelays(account.pubkey).catch(() => {});
+    await render();
+  } catch (e) {
+    $('login-error').textContent = e instanceof Error ? e.message : String(e);
+  }
+});
+
+$('nip07-btn').addEventListener('click', async () => {
+  $('login-error').textContent = '';
+  try {
+    const account = await loginWithNip07();
     refreshWriteRelays(account.pubkey).catch(() => {});
     await render();
   } catch (e) {
