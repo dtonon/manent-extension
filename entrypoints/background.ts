@@ -1,5 +1,6 @@
 import { formatCapture } from '@/utils/manent';
 import { saveNote } from '@/utils/save';
+import { retryQueue } from '@/utils/queue';
 
 const MENU_ID = 'save-selection';
 
@@ -23,8 +24,14 @@ export default defineBackground(() => {
       });
     });
   };
-  browser.runtime.onInstalled.addListener(setupMenu);
-  browser.runtime.onStartup.addListener(setupMenu);
+  browser.runtime.onInstalled.addListener(() => {
+    setupMenu();
+    retryQueue().catch(() => {});
+  });
+  browser.runtime.onStartup.addListener(() => {
+    setupMenu();
+    retryQueue().catch(() => {});
+  });
 
   browser.contextMenus.onClicked.addListener(async (info, tab) => {
     if (info.menuItemId !== MENU_ID || !info.selectionText) return;
@@ -34,8 +41,8 @@ export default defineBackground(() => {
       url: info.pageUrl ?? tab?.url,
     });
     try {
-      await saveNote(text);
-      flashBadge('✓');
+      const outcome = await saveNote(text, false, info.pageUrl ?? tab?.url);
+      flashBadge(outcome === 'published' ? '✓' : '…');
     } catch {
       flashBadge('!');
     }

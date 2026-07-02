@@ -5,6 +5,8 @@ import { getSignerState } from '@/utils/signer';
 import { refreshWriteRelays } from '@/utils/relays';
 import { formatCapture } from '@/utils/manent';
 import { saveNote } from '@/utils/save';
+import { getRecentSaves } from '@/utils/history';
+import { retryQueue } from '@/utils/queue';
 
 const $ = (id: string) => document.getElementById(id)!;
 const input = (id: string) => $(id) as HTMLInputElement;
@@ -23,7 +25,25 @@ async function render() {
     $('tab-info').textContent = currentTab.url
       ? `${currentTab.title ?? ''}\n${currentTab.url}`
       : 'No page to save';
+    await renderRecent();
   }
+}
+
+async function renderRecent() {
+  const list = $('recent');
+  list.textContent = '';
+  for (const item of await getRecentSaves()) {
+    const li = document.createElement('li');
+    li.textContent = item.snippet;
+    li.title = new Date(item.ts).toLocaleString();
+    list.appendChild(li);
+  }
+}
+
+async function retryPending() {
+  const remaining = await retryQueue();
+  $('pending-info').textContent = remaining > 0 ? `${remaining} pending, will retry` : '';
+  await renderRecent();
 }
 
 $('login-btn').addEventListener('click', async () => {
@@ -73,9 +93,10 @@ $('save-btn').addEventListener('click', async () => {
   btn.disabled = true;
   status.textContent = 'Saving…';
   try {
-    await saveNote(text, input('sensitive').checked);
+    const outcome = await saveNote(text, input('sensitive').checked, currentTab.url);
     input('comment').value = '';
-    status.textContent = 'Saved';
+    status.textContent = outcome === 'published' ? 'Saved' : 'Queued, will retry later';
+    await renderRecent();
   } catch (e) {
     status.textContent = e instanceof Error ? e.message : String(e);
   } finally {
@@ -88,4 +109,4 @@ $('logout-btn').addEventListener('click', async () => {
   await render();
 });
 
-render();
+render().then(() => retryPending().catch(() => {}));
