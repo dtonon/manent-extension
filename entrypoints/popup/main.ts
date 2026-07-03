@@ -91,6 +91,7 @@ $('save-btn').addEventListener('click', async () => {
     url: currentTab.url,
   });
   btn.disabled = true;
+  $('save-spinner').hidden = false;
   status.textContent = 'Saving…';
   try {
     const outcome = await saveNote(text, input('sensitive').checked, currentTab.url);
@@ -101,6 +102,8 @@ $('save-btn').addEventListener('click', async () => {
     status.textContent = e instanceof Error ? e.message : String(e);
   } finally {
     btn.disabled = false;
+    $('save-spinner').hidden = true;
+    setTimeout(() => (status.textContent = ''), 3000);
   }
 });
 

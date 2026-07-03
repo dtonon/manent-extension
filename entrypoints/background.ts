@@ -1,6 +1,7 @@
 import { formatCapture } from '@/utils/manent';
 import { saveNote } from '@/utils/save';
 import { retryQueue } from '@/utils/queue';
+import { showPageToast } from '@/utils/toast';
 
 const MENU_ID = 'save-selection';
 
@@ -40,11 +41,23 @@ export default defineBackground(() => {
       title: tab?.title,
       url: info.pageUrl ?? tab?.url,
     });
+    const tabId = tab?.id;
+    if (tabId) await showPageToast(tabId, 'loading', 'Saving to Manent…');
     try {
       const outcome = await saveNote(text, false, info.pageUrl ?? tab?.url);
       flashBadge(outcome === 'published' ? '✓' : '…');
-    } catch {
+      if (tabId) {
+        await showPageToast(
+          tabId,
+          'success',
+          outcome === 'published' ? 'Saved to Manent' : 'Queued, will retry later',
+        );
+      }
+    } catch (e) {
       flashBadge('!');
+      if (tabId) {
+        await showPageToast(tabId, 'error', e instanceof Error ? e.message : 'Save failed');
+      }
     }
   });
 });

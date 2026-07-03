@@ -10,6 +10,12 @@
       }
       .error { color: red; }
       [hidden] { display: none; }
+      .spinner {
+        width: 12px; height: 12px; border: 2px solid #333; border-top-color: transparent;
+        border-radius: 50%; display: inline-block; vertical-align: middle;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin { to { transform: rotate(360deg); } }
     </style>
   </head>
   <body>
@@ -38,7 +44,7 @@
       <textarea id="comment" rows="3"></textarea>
       <label><input type="checkbox" id="sensitive" /> Sensitive</label>
       <button id="save-btn">Save current page</button>
-      <p id="save-status" role="status"></p>
+      <p role="status"><span id="save-spinner" class="spinner" hidden></span> <span id="save-status"></span></p>
       <hr />
       <h3>Recent saves</h3>
       <ul id="recent"></ul>
