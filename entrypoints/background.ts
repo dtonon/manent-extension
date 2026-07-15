@@ -32,14 +32,8 @@ export default defineBackground(() => {
       });
     });
   };
-  browser.runtime.onInstalled.addListener(() => {
-    setupMenu();
-    retryQueue().catch(() => {});
-  });
-  browser.runtime.onStartup.addListener(() => {
-    setupMenu();
-    retryQueue().catch(() => {});
-  });
+  setupMenu();
+  retryQueue().catch(() => {});
 
   browser.contextMenus.onClicked.addListener(async (info, tab) => {
     const pageUrl = info.pageUrl ?? tab?.url;
