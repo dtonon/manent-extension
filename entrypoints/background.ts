@@ -34,6 +34,10 @@ export default defineBackground(() => {
   };
   setupMenu();
   retryQueue().catch(() => {});
+  browser.runtime.onInstalled.addListener(setupMenu);
+  browser.runtime.onStartup.addListener(setupMenu);
+  // Popup pings on open so the worker wakes and refreshes the menus
+  browser.runtime.onMessage.addListener(() => {});
 
   browser.contextMenus.onClicked.addListener(async (info, tab) => {
     const pageUrl = info.pageUrl ?? tab?.url;

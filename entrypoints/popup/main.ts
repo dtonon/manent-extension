@@ -112,4 +112,5 @@ $('logout-btn').addEventListener('click', async () => {
   await render();
 });
 
+browser.runtime.sendMessage('ping').catch(() => {});
 render().then(() => retryPending().catch(() => {}));
