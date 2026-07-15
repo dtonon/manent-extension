@@ -1,9 +1,11 @@
 import { formatCapture } from '@/utils/manent';
-import { saveNote } from '@/utils/save';
+import { saveNote, saveImage } from '@/utils/save';
+import type { SaveOutcome } from '@/utils/save';
 import { retryQueue } from '@/utils/queue';
 import { showPageToast } from '@/utils/toast';
 
-const MENU_ID = 'save-selection';
+const MENU_SELECTION = 'save-selection';
+const MENU_IMAGE = 'save-image';
 
 function getAction() {
   return browser.action ?? (browser as any).browserAction;
@@ -19,9 +21,14 @@ export default defineBackground(() => {
   const setupMenu = () => {
     browser.contextMenus.removeAll().then(() => {
       browser.contextMenus.create({
-        id: MENU_ID,
+        id: MENU_SELECTION,
         title: 'Save selection to Manent',
         contexts: ['selection'],
+      });
+      browser.contextMenus.create({
+        id: MENU_IMAGE,
+        title: 'Save image to Manent',
+        contexts: ['image'],
       });
     });
   };
@@ -35,16 +42,28 @@ export default defineBackground(() => {
   });
 
   browser.contextMenus.onClicked.addListener(async (info, tab) => {
-    if (info.menuItemId !== MENU_ID || !info.selectionText) return;
-    const text = formatCapture({
-      selection: info.selectionText,
-      title: tab?.title,
-      url: info.pageUrl ?? tab?.url,
-    });
+    const pageUrl = info.pageUrl ?? tab?.url;
+    let action: (() => Promise<SaveOutcome>) | null = null;
+    let loadingMessage = 'Saving to Manent…';
+
+    if (info.menuItemId === MENU_SELECTION && info.selectionText) {
+      const text = formatCapture({
+        selection: info.selectionText,
+        title: tab?.title,
+        url: pageUrl,
+      });
+      action = () => saveNote(text, false, pageUrl);
+    } else if (info.menuItemId === MENU_IMAGE && info.srcUrl) {
+      const srcUrl = info.srcUrl;
+      loadingMessage = 'Saving image to Manent…';
+      action = () => saveImage(srcUrl, tab?.title, pageUrl);
+    }
+    if (!action) return;
+
     const tabId = tab?.id;
-    if (tabId) await showPageToast(tabId, 'loading', 'Saving to Manent…');
+    if (tabId) await showPageToast(tabId, 'loading', loadingMessage);
     try {
-      const outcome = await saveNote(text, false, info.pageUrl ?? tab?.url);
+      const outcome = await action();
       flashBadge(outcome === 'published' ? '✓' : '…');
       if (tabId) {
         await showPageToast(

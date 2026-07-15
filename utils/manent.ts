@@ -1,6 +1,7 @@
 import type { EventTemplate } from 'nostr-tools/pure';
 
 export const TEXT_NOTE_KIND = 33301;
+export const FILE_NOTE_KIND = 33302;
 
 // Hex ms timestamp plus 6 random hex chars, Manent parses it back as creation time
 export function generateNoteId(nowMs: number): string {
@@ -15,9 +16,13 @@ export function buildNotePayload(text: string, sensitive = false): string {
   return JSON.stringify(sensitive ? { text, sensitive: true } : { text });
 }
 
-export function buildNoteTemplate(ciphertext: string, nowMs: number): EventTemplate {
+export function buildNoteTemplate(
+  ciphertext: string,
+  nowMs: number,
+  kind = TEXT_NOTE_KIND,
+): EventTemplate {
   return {
-    kind: TEXT_NOTE_KIND,
+    kind,
     created_at: Math.floor(nowMs / 1000),
     tags: [['d', generateNoteId(nowMs)]],
     content: ciphertext,
