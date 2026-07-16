@@ -2,11 +2,12 @@ import * as nip19 from 'nostr-tools/nip19';
 import { loginWithKey, unlock, logout } from '@/utils/auth';
 import { loginWithNip07 } from '@/utils/nip07';
 import { getSignerState } from '@/utils/signer';
-import { refreshWriteRelays } from '@/utils/relays';
+import { refreshWriteRelays, getWriteRelays } from '@/utils/relays';
 import { formatCapture } from '@/utils/manent';
 import { saveNote } from '@/utils/save';
 import { getRecentSaves } from '@/utils/history';
 import { retryQueue } from '@/utils/queue';
+import { getBlossomServers } from '@/utils/blossom';
 
 const $ = (id: string) => document.getElementById(id)!;
 const input = (id: string) => $(id) as HTMLInputElement;
@@ -26,7 +27,23 @@ async function render() {
       ? `${currentTab.title ?? ''}\n${currentTab.url}`
       : 'No page to save';
     await renderRecent();
+    renderServers(state.account.pubkey);
   }
+}
+
+function fillList(id: string, items: string[]) {
+  const list = $(id);
+  list.textContent = '';
+  for (const item of items) {
+    const li = document.createElement('li');
+    li.textContent = item;
+    list.appendChild(li);
+  }
+}
+
+async function renderServers(pubkey: string) {
+  getWriteRelays(pubkey).then((relays) => fillList('relays', relays)).catch(() => {});
+  getBlossomServers(pubkey).then((servers) => fillList('blossom', servers)).catch(() => {});
 }
 
 async function renderRecent() {

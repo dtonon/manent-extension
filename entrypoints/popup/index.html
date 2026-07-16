@@ -15,6 +15,8 @@
         animation: spin 1s linear infinite;
       }
       @keyframes spin { to { transform: rotate(360deg); } }
+      ul { padding-left: 16px; margin: 4px 0; }
+      li { word-break: break-all; }
       [hidden] { display: none; }
     </style>
   </head>
@@ -50,6 +52,11 @@
       <ul id="recent"></ul>
       <p id="pending-info"></p>
       <p><a id="manent-link" href="https://manent.dtonon.com" target="_blank">Open Manent</a></p>
+      <hr />
+      <h3>Relays</h3>
+      <ul id="relays"></ul>
+      <h3>Blossom servers</h3>
+      <ul id="blossom"></ul>
       <hr />
       <p id="whoami"></p>
       <button id="logout-btn">Logout</button>
