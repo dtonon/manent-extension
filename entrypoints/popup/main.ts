@@ -4,7 +4,7 @@ import { loginWithNip07 } from '@/utils/nip07';
 import { getSignerState } from '@/utils/signer';
 import { refreshWriteRelays, getWriteRelays } from '@/utils/relays';
 import { formatCapture } from '@/utils/manent';
-import { saveNote } from '@/utils/save';
+import { saveNote, savePage } from '@/utils/save';
 import { getRecentSaves } from '@/utils/history';
 import { retryQueue } from '@/utils/queue';
 import { getBlossomServers } from '@/utils/blossom';
@@ -12,7 +12,7 @@ import { getBlossomServers } from '@/utils/blossom';
 const $ = (id: string) => document.getElementById(id)!;
 const input = (id: string) => $(id) as HTMLInputElement;
 
-let currentTab: { title?: string; url?: string } = {};
+let currentTab: { id?: number; title?: string; url?: string } = {};
 
 async function render() {
   const state = await getSignerState();
@@ -22,7 +22,7 @@ async function render() {
   if (state.status === 'ready') {
     $('whoami').textContent = nip19.npubEncode(state.account.pubkey);
     const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
-    currentTab = { title: tab?.title, url: tab?.url };
+    currentTab = { id: tab?.id, title: tab?.title, url: tab?.url };
     $('tab-info').textContent = currentTab.url
       ? `${currentTab.title ?? ''}\n${currentTab.url}`
       : 'No page to save';
@@ -98,20 +98,14 @@ $('unlock-btn').addEventListener('click', async () => {
   }
 });
 
-$('save-btn').addEventListener('click', async () => {
-  const btn = $('save-btn') as HTMLButtonElement;
+async function runSave(buttonId: string, action: () => Promise<'published' | 'queued'>) {
+  const btn = $(buttonId) as HTMLButtonElement;
   const status = $('save-status');
-  if (!currentTab.url) return;
-  const text = formatCapture({
-    comment: input('comment').value,
-    title: currentTab.title,
-    url: currentTab.url,
-  });
   btn.disabled = true;
   $('save-spinner').hidden = false;
   status.textContent = 'Saving…';
   try {
-    const outcome = await saveNote(text, input('sensitive').checked, currentTab.url);
+    const outcome = await action();
     input('comment').value = '';
     status.textContent = outcome === 'published' ? 'Saved' : 'Queued, will retry later';
     await renderRecent();
@@ -122,6 +116,24 @@ $('save-btn').addEventListener('click', async () => {
     $('save-spinner').hidden = true;
     setTimeout(() => (status.textContent = ''), 3000);
   }
+}
+
+$('save-btn').addEventListener('click', () => {
+  if (!currentTab.url) return;
+  const text = formatCapture({
+    comment: input('comment').value,
+    title: currentTab.title,
+    url: currentTab.url,
+  });
+  runSave('save-btn', () => saveNote(text, input('sensitive').checked, currentTab.url));
+});
+
+$('save-article-btn').addEventListener('click', () => {
+  if (!currentTab.id) return;
+  const tabId = currentTab.id;
+  runSave('save-article-btn', () =>
+    savePage(tabId, input('comment').value, input('sensitive').checked),
+  );
 });
 
 $('logout-btn').addEventListener('click', async () => {

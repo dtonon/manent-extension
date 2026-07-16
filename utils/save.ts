@@ -61,6 +61,47 @@ function filenameFromUrl(url: string, mime: string): string {
   return `image.${ext}`;
 }
 
+// NIP-44 caps the plaintext at 65535 bytes, keep the article well under it
+const MAX_ARTICLE_BYTES = 55000;
+
+function truncateBytes(text: string, max: number): string {
+  const bytes = new TextEncoder().encode(text);
+  if (bytes.length <= max) return text;
+  const cut = new TextDecoder('utf-8', { fatal: false }).decode(bytes.slice(0, max));
+  return cut.replace(/�+$/, '') + '\n[truncated]';
+}
+
+export async function savePage(
+  tabId: number,
+  comment: string,
+  sensitive = false,
+): Promise<SaveOutcome> {
+  await readySigner();
+
+  let [injection] = await browser.scripting.executeScript({
+    target: { tabId },
+    files: ['/extract.js'],
+  });
+  let article = injection?.result as { title: string; text: string } | null | undefined;
+  if (article === undefined) {
+    [injection] = await browser.scripting.executeScript({
+      target: { tabId },
+      func: () => (window as any).__manentArticle ?? null,
+    });
+    article = injection?.result as { title: string; text: string } | null;
+  }
+  if (!article) throw new Error('No readable article found on this page');
+
+  const tab = await browser.tabs.get(tabId);
+  const text = formatCapture({
+    comment,
+    selection: truncateBytes(article.text, MAX_ARTICLE_BYTES),
+    title: article.title || tab.title,
+    url: tab.url,
+  });
+  return saveNote(text, sensitive, tab.url);
+}
+
 export async function saveImage(
   srcUrl: string,
   pageTitle?: string,
