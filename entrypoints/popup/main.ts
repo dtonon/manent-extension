@@ -8,6 +8,7 @@ import { saveNote, savePage } from '@/utils/save';
 import { getRecentSaves } from '@/utils/history';
 import { retryQueue } from '@/utils/queue';
 import { getBlossomServers } from '@/utils/blossom';
+import { getRawTags, setTags } from '@/utils/tags';
 
 const $ = (id: string) => document.getElementById(id)!;
 const input = (id: string) => $(id) as HTMLInputElement;
@@ -28,6 +29,7 @@ async function render() {
       : 'No page to save';
     await renderRecent();
     renderServers(state.account.pubkey);
+    input('tags').value = await getRawTags();
   }
 }
 
@@ -134,6 +136,10 @@ $('save-article-btn').addEventListener('click', () => {
   runSave('save-article-btn', () =>
     savePage(tabId, input('comment').value, input('sensitive').checked),
   );
+});
+
+$('tags').addEventListener('change', () => {
+  setTags(input('tags').value).catch(() => {});
 });
 
 $('logout-btn').addEventListener('click', async () => {

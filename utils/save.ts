@@ -8,6 +8,7 @@ import { addRecentSave } from './history';
 import { enqueue } from './queue';
 import { encryptFile, bytesToBase64 } from './file-crypto';
 import { getBlossomServers, uploadToBlossom } from './blossom';
+import { getTagsLine } from './tags';
 
 export type SaveOutcome = 'published' | 'queued';
 
@@ -44,7 +45,9 @@ export async function saveNote(
   if (!text.trim()) throw new Error('Nothing to save');
   const state = await readySigner();
 
-  const payload = buildNotePayload(text, sensitive);
+  const tags = await getTagsLine();
+  const body = tags ? `${text.trimEnd()}\n\n${tags}` : text;
+  const payload = buildNotePayload(body, sensitive);
   const ciphertext = await state.signer.nip44Encrypt(state.account.pubkey, payload);
   const event = await state.signer.signEvent(buildNoteTemplate(ciphertext, Date.now()));
 
@@ -131,7 +134,10 @@ export async function saveImage(
     meta.dim = `${bitmap.width}x${bitmap.height}`;
     bitmap.close();
   } catch {}
-  const caption = formatCapture({ title: pageTitle, url: pageUrl });
+  const tags = await getTagsLine();
+  const caption = [formatCapture({ title: pageTitle, url: pageUrl }), tags]
+    .filter(Boolean)
+    .join('\n\n');
   if (caption) meta.caption = caption;
 
   if (encrypted.bytes.length < INLINE_LIMIT) {
