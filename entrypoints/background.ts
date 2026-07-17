@@ -1,11 +1,12 @@
 import { formatCapture } from '@/utils/manent';
-import { saveNote, saveImage } from '@/utils/save';
+import { saveNote, saveImage, savePage } from '@/utils/save';
 import type { SaveOutcome } from '@/utils/save';
 import { retryQueue } from '@/utils/queue';
 import { showPageToast } from '@/utils/toast';
 
 const MENU_SELECTION = 'save-selection';
 const MENU_IMAGE = 'save-image';
+const MENU_PAGE = 'save-page';
 
 function getAction() {
   return browser.action ?? (browser as any).browserAction;
@@ -29,6 +30,11 @@ export default defineBackground(() => {
         id: MENU_IMAGE,
         title: 'Save image to Manent',
         contexts: ['image'],
+      });
+      browser.contextMenus.create({
+        id: MENU_PAGE,
+        title: 'Save full article to Manent',
+        contexts: ['page'],
       });
     });
   };
@@ -55,6 +61,10 @@ export default defineBackground(() => {
       const srcUrl = info.srcUrl;
       loadingMessage = 'Saving image to Manent…';
       action = () => saveImage(srcUrl, tab?.title, pageUrl);
+    } else if (info.menuItemId === MENU_PAGE && tab?.id) {
+      const tabId = tab.id;
+      loadingMessage = 'Saving article to Manent…';
+      action = () => savePage(tabId, '');
     }
     if (!action) return;
 
