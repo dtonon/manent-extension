@@ -6,6 +6,7 @@ import { showPageToast } from '@/utils/toast';
 
 const MENU_SELECTION = 'save-selection';
 const MENU_IMAGE = 'save-image';
+const MENU_IMAGE_COMMENT = 'save-image-comment';
 const MENU_PAGE = 'save-page';
 
 function getAction() {
@@ -29,6 +30,11 @@ export default defineBackground(() => {
       browser.contextMenus.create({
         id: MENU_IMAGE,
         title: 'Save image to Manent',
+        contexts: ['image'],
+      });
+      browser.contextMenus.create({
+        id: MENU_IMAGE_COMMENT,
+        title: 'Save image with comment to Manent',
         contexts: ['image'],
       });
       browser.contextMenus.create({
@@ -61,6 +67,18 @@ export default defineBackground(() => {
       const srcUrl = info.srcUrl;
       loadingMessage = 'Saving image to Manent…';
       action = () => saveImage(srcUrl, tab?.title, pageUrl);
+    } else if (info.menuItemId === MENU_IMAGE_COMMENT && info.srcUrl && tab?.id) {
+      const srcUrl = info.srcUrl;
+      const [injection] = await browser.scripting
+        .executeScript({
+          target: { tabId: tab.id },
+          func: () => window.prompt('Comment for this image:'),
+        })
+        .catch(() => [undefined]);
+      const comment = (injection?.result ?? null) as string | null;
+      if (comment === null) return;
+      loadingMessage = 'Saving image to Manent…';
+      action = () => saveImage(srcUrl, tab?.title, pageUrl, comment);
     } else if (info.menuItemId === MENU_PAGE && tab?.id) {
       const tabId = tab.id;
       loadingMessage = 'Saving article to Manent…';

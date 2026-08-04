@@ -109,6 +109,7 @@ export async function saveImage(
   srcUrl: string,
   pageTitle?: string,
   pageUrl?: string,
+  comment?: string,
 ): Promise<SaveOutcome> {
   const state = await readySigner();
 
@@ -135,7 +136,7 @@ export async function saveImage(
     bitmap.close();
   } catch {}
   const tags = await getTagsLine();
-  const caption = [formatCapture({ title: pageTitle, url: pageUrl }), tags]
+  const caption = [comment?.trim(), formatCapture({ title: pageTitle, url: pageUrl }), tags]
     .filter(Boolean)
     .join('\n\n');
   if (caption) meta.caption = caption;
