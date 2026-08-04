@@ -20,26 +20,36 @@ function flashBadge(text: string) {
 }
 
 export default defineBackground(() => {
+  const MENU_PARENT = 'manent';
   const setupMenu = () => {
     browser.contextMenus.removeAll().then(() => {
       browser.contextMenus.create({
+        id: MENU_PARENT,
+        title: 'Manent',
+        contexts: ['selection', 'image', 'page'],
+      });
+      browser.contextMenus.create({
         id: MENU_SELECTION,
-        title: 'Save selection to Manent',
+        parentId: MENU_PARENT,
+        title: 'Save selection',
         contexts: ['selection'],
       });
       browser.contextMenus.create({
         id: MENU_IMAGE,
-        title: 'Save image to Manent',
+        parentId: MENU_PARENT,
+        title: 'Save image',
         contexts: ['image'],
       });
       browser.contextMenus.create({
         id: MENU_IMAGE_COMMENT,
-        title: 'Save image with comment to Manent',
+        parentId: MENU_PARENT,
+        title: 'Save image with comment',
         contexts: ['image'],
       });
       browser.contextMenus.create({
         id: MENU_PAGE,
-        title: 'Save full article to Manent',
+        parentId: MENU_PARENT,
+        title: 'Save full article',
         contexts: ['page'],
       });
     });
