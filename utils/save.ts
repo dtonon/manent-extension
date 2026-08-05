@@ -67,6 +67,10 @@ function filenameFromUrl(url: string, mime: string): string {
 // NIP-44 caps the plaintext at 65535 bytes, keep the article well under it
 const MAX_ARTICLE_BYTES = 55000;
 
+function compactNewlines(text: string): string {
+  return text.replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n');
+}
+
 function truncateBytes(text: string, max: number): string {
   const bytes = new TextEncoder().encode(text);
   if (bytes.length <= max) return text;
@@ -98,7 +102,7 @@ export async function savePage(
   const tab = await browser.tabs.get(tabId);
   const text = formatCapture({
     comment,
-    selection: truncateBytes(article.text, MAX_ARTICLE_BYTES),
+    selection: truncateBytes(compactNewlines(article.text), MAX_ARTICLE_BYTES),
     title: article.title || tab.title,
     url: tab.url,
   });
