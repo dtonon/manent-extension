@@ -1,10 +1,8 @@
 import * as nip19 from 'nostr-tools/nip19';
 import { loginWithKey, unlock, logout } from '@/utils/auth';
-import { loginWithNip07 } from '@/utils/nip07';
 import { getSignerState } from '@/utils/signer';
 import { refreshWriteRelays, getWriteRelays } from '@/utils/relays';
 import { formatCapture } from '@/utils/manent';
-import { saveNote, savePage } from '@/utils/save';
 import { getRecentSaves } from '@/utils/history';
 import { retryQueue } from '@/utils/queue';
 import { getBlossomServers } from '@/utils/blossom';
@@ -12,6 +10,15 @@ import { getRawTags, setTags } from '@/utils/tags';
 
 const $ = (id: string) => document.getElementById(id)!;
 const input = (id: string) => $(id) as HTMLInputElement;
+
+async function askBackground(message: object): Promise<unknown> {
+  const res = (await browser.runtime.sendMessage(message)) as
+    | { ok: boolean; result?: unknown; error?: string }
+    | undefined;
+  if (!res) throw new Error('No response from the extension worker');
+  if (!res.ok) throw new Error(res.error ?? 'Unknown error');
+  return res.result;
+}
 
 let currentTab: { id?: number; title?: string; url?: string } = {};
 
@@ -81,8 +88,7 @@ $('login-btn').addEventListener('click', async () => {
 $('nip07-btn').addEventListener('click', async () => {
   $('login-error').textContent = '';
   try {
-    const account = await loginWithNip07();
-    refreshWriteRelays(account.pubkey).catch(() => {});
+    await askBackground({ type: 'login-nip07' });
     await render();
   } catch (e) {
     $('login-error').textContent = e instanceof Error ? e.message : String(e);
@@ -100,14 +106,14 @@ $('unlock-btn').addEventListener('click', async () => {
   }
 });
 
-async function runSave(buttonId: string, action: () => Promise<'published' | 'queued'>) {
+async function runSave(buttonId: string, message: object) {
   const btn = $(buttonId) as HTMLButtonElement;
   const status = $('save-status');
   btn.disabled = true;
   $('save-spinner').hidden = false;
   status.textContent = 'Saving…';
   try {
-    const outcome = await action();
+    const outcome = await askBackground(message);
     input('comment').value = '';
     status.textContent = outcome === 'published' ? 'Saved' : 'Queued, will retry later';
     await renderRecent();
@@ -127,15 +133,23 @@ $('save-btn').addEventListener('click', () => {
     title: currentTab.title,
     url: currentTab.url,
   });
-  runSave('save-btn', () => saveNote(text, input('sensitive').checked, currentTab.url));
+  runSave('save-btn', {
+    type: 'save-note',
+    text,
+    sensitive: input('sensitive').checked,
+    url: currentTab.url,
+    tabId: currentTab.id,
+  });
 });
 
 $('save-article-btn').addEventListener('click', () => {
   if (!currentTab.id) return;
-  const tabId = currentTab.id;
-  runSave('save-article-btn', () =>
-    savePage(tabId, input('comment').value, input('sensitive').checked),
-  );
+  runSave('save-article-btn', {
+    type: 'save-page',
+    tabId: currentTab.id,
+    comment: input('comment').value,
+    sensitive: input('sensitive').checked,
+  });
 });
 
 $('tags').addEventListener('change', () => {

@@ -3,6 +3,8 @@ import { saveNote, saveImage, savePage } from '@/utils/save';
 import type { SaveOutcome } from '@/utils/save';
 import { retryQueue } from '@/utils/queue';
 import { showPageToast } from '@/utils/toast';
+import { loginWithNip07 } from '@/utils/nip07';
+import { refreshWriteRelays } from '@/utils/relays';
 
 const MENU_SELECTION = 'save-selection';
 const MENU_IMAGE = 'save-image';
@@ -17,6 +19,32 @@ function flashBadge(text: string) {
   const action = getAction();
   action.setBadgeText({ text });
   setTimeout(() => action.setBadgeText({ text: '' }), 3000);
+}
+
+async function saveWithToast(
+  tabId: number | undefined,
+  run: () => Promise<SaveOutcome>,
+  loadingMessage = 'Saving to Manent…',
+): Promise<SaveOutcome> {
+  if (tabId) await showPageToast(tabId, 'loading', loadingMessage);
+  try {
+    const outcome = await run();
+    flashBadge(outcome === 'published' ? '✓' : '…');
+    if (tabId) {
+      await showPageToast(
+        tabId,
+        'success',
+        outcome === 'published' ? 'Saved to Manent' : 'Queued, will retry later',
+      );
+    }
+    return outcome;
+  } catch (e) {
+    flashBadge('!');
+    if (tabId) {
+      await showPageToast(tabId, 'error', e instanceof Error ? e.message : 'Save failed');
+    }
+    throw e;
+  }
 }
 
 export default defineBackground(() => {
@@ -48,8 +76,36 @@ export default defineBackground(() => {
   retryQueue().catch(() => {});
   browser.runtime.onInstalled.addListener(setupMenu);
   browser.runtime.onStartup.addListener(setupMenu);
-  // Popup pings on open so the worker wakes and refreshes the menus
-  browser.runtime.onMessage.addListener(() => {});
+  // Saves run here so a signer approval popup closing the extension popup cannot abort them
+  browser.runtime.onMessage.addListener((message: any, _sender, sendResponse) => {
+    const respond = (p: Promise<unknown>) => {
+      p.then((result) => sendResponse({ ok: true, result })).catch((e) =>
+        sendResponse({ ok: false, error: e instanceof Error ? e.message : String(e) }),
+      );
+      return true;
+    };
+    if (message?.type === 'save-note') {
+      return respond(
+        saveWithToast(message.tabId, () => saveNote(message.text, message.sensitive, message.url)),
+      );
+    }
+    if (message?.type === 'save-page') {
+      return respond(
+        saveWithToast(
+          message.tabId,
+          () => savePage(message.tabId, message.comment, message.sensitive),
+          'Saving article to Manent…',
+        ),
+      );
+    }
+    if (message?.type === 'login-nip07') {
+      return respond(
+        loginWithNip07().then(async (account) => {
+          await refreshWriteRelays(account.pubkey).catch(() => {});
+        }),
+      );
+    }
+  });
 
   browser.contextMenus.onClicked.addListener(async (info, tab) => {
     const pageUrl = info.pageUrl ?? tab?.url;
@@ -85,24 +141,6 @@ export default defineBackground(() => {
       action = () => savePage(tabId, '');
     }
     if (!action) return;
-
-    const tabId = tab?.id;
-    if (tabId) await showPageToast(tabId, 'loading', loadingMessage);
-    try {
-      const outcome = await action();
-      flashBadge(outcome === 'published' ? '✓' : '…');
-      if (tabId) {
-        await showPageToast(
-          tabId,
-          'success',
-          outcome === 'published' ? 'Saved to Manent' : 'Queued, will retry later',
-        );
-      }
-    } catch (e) {
-      flashBadge('!');
-      if (tabId) {
-        await showPageToast(tabId, 'error', e instanceof Error ? e.message : 'Save failed');
-      }
-    }
+    await saveWithToast(tab?.id, action, loadingMessage).catch(() => {});
   });
 });
