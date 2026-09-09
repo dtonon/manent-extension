@@ -1,0 +1,234 @@
+/* Tokens from Manent lib/theme.dart (ManentColors) */
+:root {
+  --accent: #e32a6d;
+  --on-accent: #ffffff;
+  --appbar-bg: #e32a6d;
+  --appbar-title: #ffffff;
+  --surface: #f5f5f5;
+  --card: #ffffff;
+  --card-dim: #eeeeee;
+  --border: #e0e0e0;
+  --text: rgba(0, 0, 0, 0.867);
+  --text-2: #757575;
+  --hint: #9e9e9e;
+  --icon-muted: #bdbdbd;
+  --shadow: rgba(0, 0, 0, 0.078);
+  --strong-bg: #1a1a1a;
+  --strong-fg: #ffffff;
+  --selected: #666666;
+  --danger: #e53935;
+  --selection: rgba(255, 238, 88, 0.267);
+  --font: Roboto, system-ui, -apple-system, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --appbar-bg: #1e1e1e;
+    --appbar-title: #b0b0b0;
+    --surface: #121212;
+    --card: #1e1e1e;
+    --card-dim: #2a2a2a;
+    --border: #333333;
+    --text: rgba(255, 255, 255, 0.871);
+    --text-2: #a8a8a8;
+    --hint: #7a7a7a;
+    --icon-muted: #9a9a9a;
+    --shadow: rgba(0, 0, 0, 0.4);
+    --strong-bg: #ededed;
+    --strong-fg: #1a1a1a;
+    --selected: #4d4d4d;
+    --danger: #ff6b66;
+    color-scheme: dark;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+}
+
+body {
+  width: 380px;
+  background: var(--surface);
+  color: var(--text);
+  font: 14px/1.3 var(--font);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--selection);
+}
+
+[hidden] {
+  display: none !important;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+a {
+  color: var(--accent);
+}
+
+.icon {
+  display: block;
+  flex: none;
+}
+
+/* Top bar: 48 high, MANENT 20/500 letter-spacing 2 */
+.appbar {
+  position: relative;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  background: var(--appbar-bg);
+}
+
+.appbar-title {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  color: var(--appbar-title);
+  font-size: 20px;
+  font-weight: 500;
+  letter-spacing: 2px;
+  text-decoration: none;
+}
+
+.screen {
+  padding: 16px;
+}
+
+/* Buttons: accent fill, radius 8, no elevation */
+button {
+  font: inherit;
+  color: inherit;
+}
+
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 16px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.btn.dim {
+  background: var(--card-dim);
+  color: var(--text);
+}
+
+.btn.strong {
+  background: var(--strong-bg);
+  color: var(--strong-fg);
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.link-btn {
+  padding: 4px;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font-size: 15px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* Fields: card-dim fill, radius 8 */
+.field {
+  display: grid;
+  gap: 6px;
+  text-align: left;
+}
+
+.field-label {
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.input {
+  width: 100%;
+  height: 44px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--card-dim);
+  color: var(--text);
+  font: inherit;
+}
+
+.input::placeholder {
+  color: var(--hint);
+}
+
+.error {
+  margin: 0;
+  color: var(--accent);
+  font-size: 13px;
+}
+
+.error:empty {
+  display: none;
+}
+
+.muted {
+  color: var(--text-2);
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  display: inline-block;
+  flex: none;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation-duration: 3s;
+  }
+}
+
+.screen > label,
+.screen > .input,
+.screen > .btn {
+  display: block;
+  margin: 8px 0;
+}
+
+textarea.input {
+  height: auto;
+  padding: 10px 12px;
+  resize: vertical;
+}

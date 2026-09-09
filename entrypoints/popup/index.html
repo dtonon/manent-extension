@@ -3,52 +3,42 @@
   <head>
     <meta charset="UTF-8" />
     <title>Manent</title>
-    <style>
-      body { min-width: 320px; font-family: sans-serif; }
-      input[type='password'], input[type='text'], textarea, button {
-        display: block; width: 100%; margin: 4px 0; box-sizing: border-box;
-      }
-      .error { color: red; }
-      .spinner {
-        width: 12px; height: 12px; border: 2px solid #333; border-top-color: transparent;
-        border-radius: 50%; display: inline-block; vertical-align: middle;
-        animation: spin 1s linear infinite;
-      }
-      @keyframes spin { to { transform: rotate(360deg); } }
-      ul { padding-left: 16px; margin: 4px 0; }
-      li { word-break: break-all; }
-      [hidden] { display: none; }
-    </style>
+    <meta name="viewport" content="width=device-width" />
+    <link rel="stylesheet" href="./style.css" />
   </head>
   <body>
-    <section id="login" hidden>
+    <header class="appbar">
+      <span class="appbar-title">MANENT</span>
+    </header>
+
+    <section id="login" class="screen" hidden>
       <h2>Login</h2>
       <label for="login-key">Private key (nsec, hex or ncryptsec)</label>
-      <input id="login-key" type="password" autocomplete="off" />
+      <input id="login-key" class="input" type="password" autocomplete="off" />
       <label for="login-password">Password (optional, encrypts the key)</label>
-      <input id="login-password" type="password" autocomplete="off" />
-      <button id="login-btn">Login</button>
-      <button id="nip07-btn">Use signer extension (NIP-07)</button>
+      <input id="login-password" class="input" type="password" autocomplete="off" />
+      <button id="login-btn" class="btn">Login</button>
+      <button id="nip07-btn" class="btn">Use signer extension (NIP-07)</button>
       <p id="login-error" class="error" role="alert"></p>
     </section>
 
-    <section id="unlock" hidden>
+    <section id="unlock" class="screen" hidden>
       <h2>Unlock</h2>
       <label for="unlock-password">Password</label>
-      <input id="unlock-password" type="password" autocomplete="off" />
-      <button id="unlock-btn">Unlock</button>
+      <input id="unlock-password" class="input" type="password" autocomplete="off" />
+      <button id="unlock-btn" class="btn">Unlock</button>
       <p id="unlock-error" class="error" role="alert"></p>
     </section>
 
-    <section id="main" hidden>
+    <section id="main" class="screen" hidden>
       <p id="tab-info"></p>
       <label for="comment">Comment (optional)</label>
-      <textarea id="comment" rows="3"></textarea>
+      <textarea id="comment" class="input" rows="3"></textarea>
       <label for="tags">Tags (added at the bottom of the note)</label>
-      <input id="tags" type="text" />
+      <input id="tags" class="input" type="text" />
       <label><input type="checkbox" id="sensitive" /> Sensitive</label>
-      <button id="save-btn">Save current page</button>
-      <button id="save-article-btn">Save full article</button>
+      <button id="save-btn" class="btn">Save current page</button>
+      <button id="save-article-btn" class="btn">Save full article</button>
       <p role="status"><span id="save-spinner" class="spinner" hidden></span> <span id="save-status"></span></p>
       <hr />
       <h3>Recent saves</h3>
@@ -62,7 +52,7 @@
       <ul id="blossom"></ul>
       <hr />
       <p id="whoami"></p>
-      <button id="logout-btn">Logout</button>
+      <button id="logout-btn" class="btn">Logout</button>
     </section>
 
     <script type="module" src="./main.ts"></script>
