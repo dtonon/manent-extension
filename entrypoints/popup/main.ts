@@ -11,6 +11,7 @@ import { renderIcons, iconSvg } from '@/utils/icons';
 
 const $ = (id: string) => document.getElementById(id)!;
 const input = (id: string) => $(id) as HTMLInputElement;
+const button = (id: string) => $(id) as HTMLButtonElement;
 
 async function askBackground(message: object): Promise<unknown> {
   const res = (await browser.runtime.sendMessage(message)) as
@@ -37,9 +38,11 @@ async function render() {
     $('whoami').textContent = nip19.npubEncode(state.account.pubkey);
     const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
     currentTab = { id: tab?.id, title: tab?.title, url: tab?.url };
-    $('tab-info').textContent = currentTab.url
-      ? `${currentTab.title ?? ''}\n${currentTab.url}`
-      : 'No page to save';
+    $('tab-title').textContent = currentTab.url ? (currentTab.title ?? '') : 'No page to save';
+    $('tab-url').textContent = currentTab.url ?? '';
+    $('tab-url').hidden = !currentTab.url;
+    button('save-btn').disabled = !currentTab.url;
+    button('save-article-btn').disabled = !currentTab.id || !currentTab.url;
     await renderRecent();
     renderServers(state.account.pubkey);
     input('tags').value = await getRawTags();
@@ -147,25 +150,71 @@ $('unlock-logout').addEventListener('click', async () => {
   await render();
 });
 
+let resultTimer: ReturnType<typeof setTimeout> | undefined;
+
+function isSensitive(): boolean {
+  return $('sensitive').getAttribute('aria-pressed') === 'true';
+}
+
+function showResult(kind: 'published' | 'queued' | 'error', text: string) {
+  const icon = kind === 'published' ? 'checkCircle' : kind === 'queued' ? 'schedule' : 'syncProblem';
+  $('save-result-icon').innerHTML = iconSvg(icon, 20);
+  $('save-result-text').textContent = text;
+  $('save-open').hidden = kind === 'error';
+  $('save-result').hidden = false;
+  $('save-live').textContent = text;
+  // Errors keep the buttons visible so the save can be retried
+  $('save-actions').hidden = kind !== 'error';
+  clearTimeout(resultTimer);
+  resultTimer = setTimeout(hideResult, kind === 'error' ? 6000 : 3000);
+}
+
+function hideResult() {
+  const lostFocus = document.activeElement === document.body;
+  $('save-result').hidden = true;
+  $('save-actions').hidden = false;
+  if (lostFocus) button('save-btn').focus();
+}
+
 async function runSave(buttonId: string, message: object) {
-  const btn = $(buttonId) as HTMLButtonElement;
-  const status = $('save-status');
-  btn.disabled = true;
-  $('save-spinner').hidden = false;
-  status.textContent = 'Saving…';
+  const btn = button(buttonId);
+  const icon = btn.querySelector('.btn-icon')!;
+  const label = btn.querySelector('.btn-label')!;
+  const original = { icon: icon.innerHTML, label: label.textContent };
+  hideResult();
+  button('save-btn').disabled = true;
+  button('save-article-btn').disabled = true;
+  icon.innerHTML = '<span class="spinner"></span>';
+  label.textContent = 'Saving…';
+  $('save-live').textContent = 'Saving…';
   try {
     const outcome = await askBackground(message);
     input('comment').value = '';
-    status.textContent = outcome === 'published' ? 'Saved' : 'Queued, will retry later';
+    growComment();
+    if (outcome === 'published') showResult('published', 'Saved to Manent');
+    else showResult('queued', 'Queued, will retry later');
     await renderRecent();
   } catch (e) {
-    status.textContent = e instanceof Error ? e.message : String(e);
+    showResult('error', e instanceof Error ? e.message : String(e));
   } finally {
-    btn.disabled = false;
-    $('save-spinner').hidden = true;
-    setTimeout(() => (status.textContent = ''), 3000);
+    icon.innerHTML = original.icon;
+    label.textContent = original.label;
+    button('save-btn').disabled = !currentTab.url;
+    button('save-article-btn').disabled = !currentTab.id || !currentTab.url;
   }
 }
+
+function growComment() {
+  const el = $('comment');
+  el.style.height = 'auto';
+  el.style.height = `${el.scrollHeight}px`;
+}
+
+$('comment').addEventListener('input', growComment);
+
+$('sensitive').addEventListener('click', () => {
+  $('sensitive').setAttribute('aria-pressed', String(!isSensitive()));
+});
 
 $('save-btn').addEventListener('click', () => {
   if (!currentTab.url) return;
@@ -177,7 +226,7 @@ $('save-btn').addEventListener('click', () => {
   runSave('save-btn', {
     type: 'save-note',
     text,
-    sensitive: input('sensitive').checked,
+    sensitive: isSensitive(),
     url: currentTab.url,
     tabId: currentTab.id,
   });
@@ -189,7 +238,7 @@ $('save-article-btn').addEventListener('click', () => {
     type: 'save-page',
     tabId: currentTab.id,
     comment: input('comment').value,
-    sensitive: input('sensitive').checked,
+    sensitive: isSensitive(),
   });
 });
 

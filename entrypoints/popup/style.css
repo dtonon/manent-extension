@@ -52,6 +52,10 @@ body {
   margin: 0;
 }
 
+html {
+  overflow-x: hidden;
+}
+
 body {
   width: 380px;
   background: var(--surface);
@@ -321,4 +325,139 @@ textarea.input {
 
 .npub {
   word-break: break-all;
+}
+
+/* Save view: the note as it will land in Manent */
+.screen.main {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.note-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 16px 8px;
+  border-radius: 8px;
+  background: var(--card);
+}
+
+.note-card:has(.note-comment:focus) {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+.note-comment {
+  width: 100%;
+  max-height: 160px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  resize: none;
+  overflow-y: auto;
+}
+
+.note-comment:focus {
+  outline: none;
+}
+
+.note-comment::placeholder,
+.note-tags::placeholder {
+  color: var(--hint);
+  font-weight: 400;
+}
+
+.note-source {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding-left: 10px;
+  border-left: 2px solid var(--border);
+}
+
+.note-link {
+  color: var(--accent);
+  text-decoration: underline;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.note-tags {
+  width: 100%;
+  padding: 2px 0;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-weight: 600;
+}
+
+.note-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.note-time {
+  color: var(--text-2);
+  font-size: 12px;
+}
+
+/* As the revealed-note Hide chip: card-dim, radius 4, 11 text */
+.chip-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 24px;
+  padding: 2px 8px;
+  border: 0;
+  border-radius: 4px;
+  background: var(--card-dim);
+  color: var(--text-2);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.chip-toggle[aria-pressed='true'] {
+  background: var(--selected);
+  color: #ffffff;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.actions .btn {
+  flex: 1;
+}
+
+.result {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: var(--card);
+}
+
+.result-icon {
+  color: var(--accent);
+}
+
+.result-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.result a {
+  font-size: 13px;
+  font-weight: 500;
 }

@@ -86,16 +86,49 @@
       </form>
     </section>
 
-    <section id="main" class="screen" hidden>
-      <p id="tab-info"></p>
-      <label for="comment">Comment (optional)</label>
-      <textarea id="comment" class="input" rows="3"></textarea>
-      <label for="tags">Tags (added at the bottom of the note)</label>
-      <input id="tags" class="input" type="text" />
-      <label><input type="checkbox" id="sensitive" /> Sensitive</label>
-      <button id="save-btn" class="btn">Save current page</button>
-      <button id="save-article-btn" class="btn">Save full article</button>
-      <p role="status"><span id="save-spinner" class="spinner" hidden></span> <span id="save-status"></span></p>
+    <section id="main" class="screen main" hidden>
+      <h1 class="visually-hidden">Save this page to Manent</h1>
+      <div class="note-card">
+        <label class="visually-hidden" for="comment">Comment</label>
+        <textarea id="comment" class="note-comment" rows="1" placeholder="Add a comment..."></textarea>
+        <div class="note-source">
+          <span id="tab-title"></span>
+          <span id="tab-url" class="note-link"></span>
+        </div>
+        <label class="visually-hidden" for="tags">Tags, added at the bottom of the note</label>
+        <input
+          id="tags"
+          class="note-tags"
+          type="text"
+          placeholder="+ tag"
+          spellcheck="false"
+          autocomplete="off"
+        />
+        <div class="note-foot">
+          <button id="sensitive" class="chip-toggle" type="button" aria-pressed="false">
+            <span data-icon="visibilityOff" data-icon-size="12"></span>Sensitive
+          </button>
+          <span class="note-time">now</span>
+        </div>
+      </div>
+      <div id="save-actions" class="actions">
+        <button id="save-btn" class="btn" type="button">
+          <span class="btn-icon" data-icon="link" data-icon-size="18"></span>
+          <span class="btn-label">Save link</span>
+        </button>
+        <button id="save-article-btn" class="btn dim" type="button">
+          <span class="btn-icon" data-icon="article" data-icon-size="18"></span>
+          <span class="btn-label">Save article</span>
+        </button>
+      </div>
+      <div id="save-result" class="result" hidden>
+        <span id="save-result-icon" class="result-icon"></span>
+        <span id="save-result-text" class="result-text"></span>
+        <a id="save-open" href="https://manent.dtonon.com" target="_blank" rel="noopener"
+          >Open in Manent</a
+        >
+      </div>
+      <p id="save-live" class="visually-hidden" role="status"></p>
       <hr />
       <h3>Recent saves</h3>
       <ul id="recent"></ul>
