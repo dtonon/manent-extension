@@ -232,3 +232,93 @@ textarea.input {
   padding: 10px 12px;
   resize: vertical;
 }
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Login and unlock, as login_screen.dart */
+.screen.centered {
+  min-height: 500px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 16px;
+  padding: 24px 40px;
+  text-align: center;
+}
+
+.screen.centered p {
+  margin: 0;
+}
+
+.pitch,
+.lead {
+  font-size: 16px;
+  line-height: 1.3;
+}
+
+.screen.centered .lead {
+  margin-top: 24px;
+}
+
+.screen.centered .login-footer {
+  margin-top: 32px;
+  font-size: 14px;
+  line-height: 1.3;
+}
+
+.input-wrap {
+  position: relative;
+}
+
+.input-wrap .input {
+  padding-right: 44px;
+}
+
+.input-icon {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--icon-muted);
+  cursor: pointer;
+}
+
+.avatar {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--on-accent);
+  flex: none;
+}
+
+.avatar.large {
+  width: 72px;
+  height: 72px;
+  align-self: center;
+}
+
+.npub {
+  word-break: break-all;
+}

@@ -11,23 +11,79 @@
       <span class="appbar-title">MANENT</span>
     </header>
 
-    <section id="login" class="screen" hidden>
-      <h2>Login</h2>
-      <label for="login-key">Private key (nsec, hex or ncryptsec)</label>
-      <input id="login-key" class="input" type="password" autocomplete="off" />
-      <label for="login-password">Password (optional, encrypts the key)</label>
-      <input id="login-password" class="input" type="password" autocomplete="off" />
-      <button id="login-btn" class="btn">Login</button>
-      <button id="nip07-btn" class="btn">Use signer extension (NIP-07)</button>
+    <section id="login" class="screen centered" hidden>
+      <h1 class="visually-hidden">Log in</h1>
+      <div id="login-choice" class="stack">
+        <p class="pitch">
+          Manent allows you to share notes, securely encrypted, across your devices.<br />Keep
+          your ideas flowing!
+        </p>
+        <p class="lead">Log in with your Nostr account:</p>
+        <button id="nip07-btn" class="btn" type="button">Browser Extension</button>
+        <button id="nsec-open" class="link-btn" type="button">Or use your nsec</button>
+      </div>
+      <form id="login-form" class="stack" hidden>
+        <p class="lead">Log in with your nsec:</p>
+        <div class="field">
+          <label class="field-label" for="login-key">Private key (nsec, hex or ncryptsec)</label>
+          <div class="input-wrap">
+            <input
+              id="login-key"
+              class="input"
+              type="password"
+              autocomplete="off"
+              spellcheck="false"
+              aria-describedby="login-error"
+            />
+            <button
+              id="login-key-toggle"
+              class="input-icon"
+              type="button"
+              aria-label="Show key"
+              aria-pressed="false"
+              data-icon="visibility"
+              data-icon-size="18"
+            ></button>
+          </div>
+        </div>
+        <div class="field">
+          <label class="field-label" for="login-password"
+            >Password, encrypts the key on this device (optional)</label
+          >
+          <input id="login-password" class="input" type="password" autocomplete="new-password" />
+        </div>
+        <button id="login-btn" class="btn" type="submit">Log in</button>
+        <button id="nsec-back" class="link-btn" type="button">Back</button>
+      </form>
       <p id="login-error" class="error" role="alert"></p>
+      <p class="login-footer">
+        Are you new to Nostr?
+        <a href="https://njump.me" target="_blank" rel="noopener">Read more</a><br />about the
+        protocol or immediately<br /><a href="https://nstart.me" target="_blank" rel="noopener"
+          >create a free account</a
+        >
+      </p>
     </section>
 
-    <section id="unlock" class="screen" hidden>
-      <h2>Unlock</h2>
-      <label for="unlock-password">Password</label>
-      <input id="unlock-password" class="input" type="password" autocomplete="off" />
-      <button id="unlock-btn" class="btn">Unlock</button>
-      <p id="unlock-error" class="error" role="alert"></p>
+    <section id="unlock" class="screen centered" hidden>
+      <h1 class="visually-hidden">Unlock</h1>
+      <form id="unlock-form" class="stack">
+        <span class="avatar large" data-icon="person" data-icon-size="40"></span>
+        <p id="unlock-npub" class="muted npub"></p>
+        <div class="field">
+          <label class="field-label" for="unlock-password">Password</label>
+          <input
+            id="unlock-password"
+            class="input"
+            type="password"
+            autocomplete="current-password"
+            aria-describedby="unlock-error"
+          />
+          <p id="unlock-error" class="error" role="alert"></p>
+        </div>
+        <button id="unlock-btn" class="btn" type="submit">Unlock</button>
+        <button id="unlock-logout" class="link-btn" type="button">Log out</button>
+      </form>
     </section>
 
     <section id="main" class="screen" hidden>

@@ -7,6 +7,7 @@ import { getRecentSaves } from '@/utils/history';
 import { retryQueue } from '@/utils/queue';
 import { getBlossomServers } from '@/utils/blossom';
 import { getRawTags, setTags } from '@/utils/tags';
+import { renderIcons, iconSvg } from '@/utils/icons';
 
 const $ = (id: string) => document.getElementById(id)!;
 const input = (id: string) => $(id) as HTMLInputElement;
@@ -27,6 +28,11 @@ async function render() {
   $('login').hidden = state.status !== 'none';
   $('unlock').hidden = state.status !== 'locked';
   $('main').hidden = state.status !== 'ready';
+  if (state.status === 'none') showLoginForm(false);
+  if (state.status === 'locked') {
+    $('unlock-npub').textContent = shortNpub(state.account.pubkey);
+    input('unlock-password').focus();
+  }
   if (state.status === 'ready') {
     $('whoami').textContent = nip19.npubEncode(state.account.pubkey);
     const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
@@ -38,6 +44,18 @@ async function render() {
     renderServers(state.account.pubkey);
     input('tags').value = await getRawTags();
   }
+}
+
+function shortNpub(pubkey: string): string {
+  const npub = nip19.npubEncode(pubkey);
+  return `${npub.slice(0, 12)}…${npub.slice(-6)}`;
+}
+
+function showLoginForm(open: boolean) {
+  $('login-choice').hidden = open;
+  $('login-form').hidden = !open;
+  $('login-error').textContent = '';
+  if (open) input('login-key').focus();
 }
 
 function fillList(id: string, items: string[]) {
@@ -72,7 +90,24 @@ async function retryPending() {
   await renderRecent();
 }
 
-$('login-btn').addEventListener('click', async () => {
+$('nsec-open').addEventListener('click', () => showLoginForm(true));
+$('nsec-back').addEventListener('click', () => {
+  showLoginForm(false);
+  $('nsec-open').focus();
+});
+
+$('login-key-toggle').addEventListener('click', () => {
+  const key = input('login-key');
+  const show = key.type === 'password';
+  key.type = show ? 'text' : 'password';
+  const toggle = $('login-key-toggle');
+  toggle.setAttribute('aria-pressed', String(show));
+  toggle.setAttribute('aria-label', show ? 'Hide key' : 'Show key');
+  toggle.innerHTML = iconSvg(show ? 'visibilityOff' : 'visibility', 18);
+});
+
+$('login-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
   $('login-error').textContent = '';
   try {
     const account = await loginWithKey(input('login-key').value, input('login-password').value);
@@ -95,15 +130,21 @@ $('nip07-btn').addEventListener('click', async () => {
   }
 });
 
-$('unlock-btn').addEventListener('click', async () => {
+$('unlock-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
   $('unlock-error').textContent = '';
   try {
     await unlock(input('unlock-password').value);
     input('unlock-password').value = '';
     await render();
   } catch {
-    $('unlock-error').textContent = 'Wrong password';
+    $('unlock-error').textContent = 'Wrong password, try again';
   }
+});
+
+$('unlock-logout').addEventListener('click', async () => {
+  await logout();
+  await render();
 });
 
 async function runSave(buttonId: string, message: object) {
@@ -161,5 +202,6 @@ $('logout-btn').addEventListener('click', async () => {
   await render();
 });
 
+renderIcons();
 browser.runtime.sendMessage('ping').catch(() => {});
 render().then(() => retryPending().catch(() => {}));
