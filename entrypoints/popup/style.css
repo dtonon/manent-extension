@@ -461,3 +461,75 @@ textarea.input {
   font-size: 13px;
   font-weight: 500;
 }
+
+/* Recent saves */
+.recent {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* As the transcript label: 11, secondary, with a 1 px rule */
+.section-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 0;
+  color: var(--text-2);
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.section-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.recent-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.recent-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 36px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: var(--card);
+}
+
+.recent-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Secondary text instead of the app's faintText, for WCAG contrast */
+.recent-time,
+.recent-status {
+  color: var(--text-2);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.text-btn {
+  align-self: center;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}

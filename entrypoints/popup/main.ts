@@ -4,7 +4,7 @@ import { getSignerState } from '@/utils/signer';
 import { refreshWriteRelays, getWriteRelays } from '@/utils/relays';
 import { formatCapture } from '@/utils/manent';
 import { getRecentSaves } from '@/utils/history';
-import { retryQueue } from '@/utils/queue';
+import { retryQueue, getQueue } from '@/utils/queue';
 import { getBlossomServers } from '@/utils/blossom';
 import { getRawTags, setTags } from '@/utils/tags';
 import { renderIcons, iconSvg } from '@/utils/icons';
@@ -76,20 +76,61 @@ async function renderServers(pubkey: string) {
   getBlossomServers(pubkey).then((servers) => fillList('blossom', servers)).catch(() => {});
 }
 
-async function renderRecent() {
-  const list = $('recent');
-  list.textContent = '';
-  for (const item of await getRecentSaves()) {
-    const li = document.createElement('li');
-    li.textContent = item.snippet;
-    li.title = new Date(item.ts).toLocaleString();
-    list.appendChild(li);
+const RECENT_COLLAPSED = 3;
+let recentExpanded = false;
+
+function formatTime(ts: number): string {
+  const date = new Date(ts);
+  if (date.toDateString() === new Date().toDateString()) {
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }
+  return date.toLocaleDateString([], { day: 'numeric', month: 'short' });
 }
 
+async function renderRecent() {
+  const [saved, pending] = await Promise.all([getRecentSaves(), getQueue()]);
+  const items = [
+    ...pending.map((p) => ({ snippet: p.snippet, ts: p.ts, pending: true })),
+    ...saved.map((s) => ({ snippet: s.snippet, ts: s.ts, pending: false })),
+  ]
+    .sort((a, b) => b.ts - a.ts)
+    .slice(0, 10);
+
+  const list = $('recent');
+  list.textContent = '';
+  const visible = recentExpanded ? items : items.slice(0, RECENT_COLLAPSED);
+  for (const item of visible) {
+    const li = document.createElement('li');
+    li.className = 'recent-row';
+    const text = document.createElement('span');
+    text.className = 'recent-text';
+    text.textContent = item.snippet;
+    text.title = new Date(item.ts).toLocaleString();
+    const time = document.createElement('time');
+    time.className = 'recent-time';
+    time.dateTime = new Date(item.ts).toISOString();
+    time.textContent = formatTime(item.ts);
+    const status = document.createElement('span');
+    status.className = 'recent-status';
+    status.setAttribute('role', 'img');
+    status.setAttribute('aria-label', item.pending ? 'Waiting to sync' : 'Saved');
+    status.innerHTML = iconSvg(item.pending ? 'schedule' : 'check', 14);
+    li.append(text, time, status);
+    list.appendChild(li);
+  }
+  $('recent-section').hidden = items.length === 0;
+  $('recent-more').hidden = items.length <= RECENT_COLLAPSED;
+  $('recent-more').textContent = recentExpanded ? 'Show less' : 'Show all';
+  $('recent-more').setAttribute('aria-expanded', String(recentExpanded));
+}
+
+$('recent-more').addEventListener('click', () => {
+  recentExpanded = !recentExpanded;
+  renderRecent();
+});
+
 async function retryPending() {
-  const remaining = await retryQueue();
-  $('pending-info').textContent = remaining > 0 ? `${remaining} pending, will retry` : '';
+  await retryQueue();
   await renderRecent();
 }
 
