@@ -16,6 +16,12 @@ function getAction() {
   return browser.action ?? (browser as any).browserAction;
 }
 
+function styleBadge() {
+  const action = getAction();
+  action.setBadgeBackgroundColor({ color: '#e32a6d' });
+  action.setBadgeTextColor?.({ color: '#ffffff' });
+}
+
 function flashBadge(text: string) {
   const action = getAction();
   action.setBadgeText({ text });
@@ -72,6 +78,7 @@ export default defineBackground(() => {
     });
   };
   setupMenu();
+  styleBadge();
   retryQueue().catch(() => {});
   browser.runtime.onInstalled.addListener(setupMenu);
   browser.runtime.onStartup.addListener(setupMenu);
