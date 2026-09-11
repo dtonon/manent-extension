@@ -29,13 +29,17 @@ async function render() {
   $('login').hidden = state.status !== 'none';
   $('unlock').hidden = state.status !== 'locked';
   $('main').hidden = state.status !== 'ready';
+  $('avatar-btn').hidden = state.status !== 'ready';
+  if (state.status !== 'ready') closeMenu(false);
   if (state.status === 'none') showLoginForm(false);
   if (state.status === 'locked') {
     $('unlock-npub').textContent = shortNpub(state.account.pubkey);
     input('unlock-password').focus();
   }
   if (state.status === 'ready') {
-    $('whoami').textContent = nip19.npubEncode(state.account.pubkey);
+    $('whoami').textContent = shortNpub(state.account.pubkey);
+    $('whoami').title = nip19.npubEncode(state.account.pubkey);
+    $('signer-type').textContent = `Signer: ${SIGNER_LABELS[state.account.signerType]}`;
     const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
     currentTab = { id: tab?.id, title: tab?.title, url: tab?.url };
     $('tab-title').textContent = currentTab.url ? (currentTab.title ?? '') : 'No page to save';
@@ -61,19 +65,57 @@ function showLoginForm(open: boolean) {
   if (open) input('login-key').focus();
 }
 
+const SIGNER_LABELS = { nip07: 'Extension', nsec: 'Nsec', ncryptsec: 'Nsec, password protected' };
+
 function fillList(id: string, items: string[]) {
   const list = $(id);
   list.textContent = '';
-  for (const item of items) {
+  for (const item of items.length ? items : ['None']) {
     const li = document.createElement('li');
     li.textContent = item;
     list.appendChild(li);
   }
+  $(`${id}-count`).textContent = String(items.length);
 }
 
 async function renderServers(pubkey: string) {
   getWriteRelays(pubkey).then((relays) => fillList('relays', relays)).catch(() => {});
   getBlossomServers(pubkey).then((servers) => fillList('blossom', servers)).catch(() => {});
+}
+
+function openMenu() {
+  $('account-menu').hidden = false;
+  $('menu-scrim').hidden = false;
+  $('avatar-btn').setAttribute('aria-expanded', 'true');
+  $('account-menu').querySelector<HTMLElement>('.menu-item')?.focus();
+}
+
+function closeMenu(restoreFocus = true) {
+  if ($('account-menu').hidden) return;
+  $('account-menu').hidden = true;
+  $('menu-scrim').hidden = true;
+  $('avatar-btn').setAttribute('aria-expanded', 'false');
+  if (restoreFocus) $('avatar-btn').focus();
+}
+
+$('avatar-btn').addEventListener('click', () =>
+  $('account-menu').hidden ? openMenu() : closeMenu(),
+);
+$('menu-scrim').addEventListener('click', () => closeMenu());
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !$('account-menu').hidden) {
+    e.preventDefault();
+    closeMenu();
+  }
+});
+
+for (const id of ['relays', 'blossom']) {
+  const toggle = $(`${id}-toggle`);
+  toggle.addEventListener('click', () => {
+    const open = toggle.getAttribute('aria-expanded') !== 'true';
+    toggle.setAttribute('aria-expanded', String(open));
+    $(id).hidden = !open;
+  });
 }
 
 const RECENT_COLLAPSED = 3;
@@ -288,6 +330,7 @@ $('tags').addEventListener('change', () => {
 });
 
 $('logout-btn').addEventListener('click', async () => {
+  closeMenu(false);
   await logout();
   await render();
 });

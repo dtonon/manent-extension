@@ -8,8 +8,61 @@
   </head>
   <body>
     <header class="appbar">
+      <button
+        id="avatar-btn"
+        class="avatar appbar-avatar"
+        type="button"
+        aria-label="Account"
+        aria-expanded="false"
+        aria-controls="account-menu"
+        data-icon="person"
+        data-icon-size="18"
+        hidden
+      ></button>
       <span class="appbar-title">MANENT</span>
     </header>
+
+    <div id="menu-scrim" class="scrim" hidden></div>
+    <div id="account-menu" class="menu" role="region" aria-label="Account" hidden>
+      <button
+        id="relays-toggle"
+        class="menu-item"
+        type="button"
+        aria-expanded="false"
+        aria-controls="relays"
+      >
+        <span data-icon="dns" data-icon-size="20"></span>
+        <span class="menu-label">Relays</span>
+        <span id="relays-count" class="menu-count"></span>
+        <span class="menu-chevron" data-icon="expandMore" data-icon-size="18"></span>
+      </button>
+      <ul id="relays" class="menu-sublist" aria-label="Write relays" hidden></ul>
+      <button
+        id="blossom-toggle"
+        class="menu-item"
+        type="button"
+        aria-expanded="false"
+        aria-controls="blossom"
+      >
+        <span data-icon="cloud" data-icon-size="20"></span>
+        <span class="menu-label">Blossom servers</span>
+        <span id="blossom-count" class="menu-count"></span>
+        <span class="menu-chevron" data-icon="expandMore" data-icon-size="18"></span>
+      </button>
+      <ul id="blossom" class="menu-sublist" aria-label="Blossom servers" hidden></ul>
+      <a class="menu-item" href="https://manent.dtonon.com" target="_blank" rel="noopener">
+        <span data-icon="openInNew" data-icon-size="20"></span>
+        <span class="menu-label">Open Manent</span>
+      </a>
+      <button id="logout-btn" class="menu-item danger" type="button">
+        <span data-icon="logout" data-icon-size="20"></span>
+        <span class="menu-label">Log out</span>
+      </button>
+      <div class="menu-meta">
+        <span id="whoami" class="npub"></span>
+        <span id="signer-type"></span>
+      </div>
+    </div>
 
     <section id="login" class="screen centered" hidden>
       <h1 class="visually-hidden">Log in</h1>
@@ -143,16 +196,6 @@
           Show all
         </button>
       </section>
-      <hr />
-      <p><a id="manent-link" href="https://manent.dtonon.com" target="_blank">Open Manent</a></p>
-      <hr />
-      <h3>Relays</h3>
-      <ul id="relays"></ul>
-      <h3>Blossom servers</h3>
-      <ul id="blossom"></ul>
-      <hr />
-      <p id="whoami"></p>
-      <button id="logout-btn" class="btn">Logout</button>
     </section>
 
     <script type="module" src="./main.ts"></script>
