@@ -26,22 +26,20 @@ async function saveWithToast(
   run: () => Promise<SaveOutcome>,
   loadingMessage = 'Saving to Manent…',
 ): Promise<SaveOutcome> {
-  if (tabId) await showPageToast(tabId, 'loading', loadingMessage);
+  const title = tabId ? (await browser.tabs.get(tabId).catch(() => undefined))?.title : undefined;
+  if (tabId) await showPageToast(tabId, 'loading', loadingMessage, title);
   try {
     const outcome = await run();
     flashBadge(outcome === 'published' ? '✓' : '…');
     if (tabId) {
-      await showPageToast(
-        tabId,
-        'success',
-        outcome === 'published' ? 'Saved to Manent' : 'Queued, will retry later',
-      );
+      if (outcome === 'published') await showPageToast(tabId, 'published', 'Saved to Manent', title);
+      else await showPageToast(tabId, 'queued', 'Queued, will retry later', title);
     }
     return outcome;
   } catch (e) {
     flashBadge('!');
     if (tabId) {
-      await showPageToast(tabId, 'error', e instanceof Error ? e.message : 'Save failed');
+      await showPageToast(tabId, 'error', 'Not saved', e instanceof Error ? e.message : 'Save failed');
     }
     throw e;
   }
