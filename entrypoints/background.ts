@@ -3,6 +3,7 @@ import { saveNote, saveImage, savePage } from '@/utils/save';
 import type { SaveOutcome } from '@/utils/save';
 import { retryQueue } from '@/utils/queue';
 import { showPageToast } from '@/utils/toast';
+import { askImageComment } from '@/utils/comment-dialog';
 import { loginWithNip07 } from '@/utils/nip07';
 import { refreshWriteRelays } from '@/utils/relays';
 
@@ -123,13 +124,7 @@ export default defineBackground(() => {
       action = () => saveImage(srcUrl, tab?.title, pageUrl);
     } else if (info.menuItemId === MENU_IMAGE_COMMENT && info.srcUrl && tab?.id) {
       const srcUrl = info.srcUrl;
-      const [injection] = await browser.scripting
-        .executeScript({
-          target: { tabId: tab.id },
-          func: () => window.prompt('Comment for this image:'),
-        })
-        .catch(() => [undefined]);
-      const comment = (injection?.result ?? null) as string | null;
+      const comment = await askImageComment(tab.id, srcUrl);
       if (comment === null) return;
       loadingMessage = 'Saving image to Manent…';
       action = () => saveImage(srcUrl, tab?.title, pageUrl, comment);
