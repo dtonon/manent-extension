@@ -2,7 +2,6 @@ import * as nip19 from 'nostr-tools/nip19';
 import { loginWithKey, unlock, logout } from '@/utils/auth';
 import { getSignerState } from '@/utils/signer';
 import { refreshWriteRelays, getWriteRelays } from '@/utils/relays';
-import { formatCapture } from '@/utils/manent';
 import { getRecentSaves } from '@/utils/history';
 import { retryQueue, getQueue } from '@/utils/queue';
 import { getBlossomServers } from '@/utils/blossom';
@@ -307,8 +306,10 @@ $('full-article').addEventListener('click', () => {
   updateSaveControls();
 });
 
-$('save-btn').addEventListener('click', () => {
+$('save-btn').addEventListener('click', async () => {
   if (!currentTab.url) return;
+  // The tags field may not have fired change yet, the worker reads tags from storage
+  await setTags(input('tags').value).catch(() => {});
   if (isFullArticle() && currentTab.id) {
     runSave({
       type: 'save-page',
@@ -318,16 +319,12 @@ $('save-btn').addEventListener('click', () => {
     });
     return;
   }
-  const text = formatCapture({
-    comment: input('comment').value,
+  runSave({
+    type: 'save-link',
     title: currentTab.title,
     url: currentTab.url,
-  });
-  runSave({
-    type: 'save-note',
-    text,
+    comment: input('comment').value,
     sensitive: isSensitive(),
-    url: currentTab.url,
     tabId: currentTab.id,
   });
 });

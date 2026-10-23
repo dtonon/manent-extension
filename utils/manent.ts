@@ -42,3 +42,17 @@ export function formatCapture(parts: {
   if (source) blocks.push(source);
   return blocks.join('\n\n');
 }
+
+// Popup saves, in the same order as the popup preview card
+export function formatPageNote(parts: {
+  comment?: string;
+  tags?: string;
+  title?: string;
+  url?: string;
+  article?: string;
+}): string {
+  const source = [parts.title, parts.url].filter(Boolean).join('\n');
+  return [parts.comment?.trim(), parts.tags, source, parts.article?.trim()]
+    .filter(Boolean)
+    .join('\n\n');
+}

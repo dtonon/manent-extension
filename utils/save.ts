@@ -1,5 +1,11 @@
 import type { Event } from 'nostr-tools/pure';
-import { buildNotePayload, buildNoteTemplate, formatCapture, FILE_NOTE_KIND } from './manent';
+import {
+  buildNotePayload,
+  buildNoteTemplate,
+  formatCapture,
+  formatPageNote,
+  FILE_NOTE_KIND,
+} from './manent';
 import { getSignerState } from './signer';
 import type { SignerState } from './signer';
 import { getWriteRelays } from './relays';
@@ -41,17 +47,32 @@ export async function saveNote(
   text: string,
   sensitive = false,
   sourceUrl?: string,
+  options: { appendTags?: boolean; snippet?: string } = {},
 ): Promise<SaveOutcome> {
   if (!text.trim()) throw new Error('Nothing to save');
   const state = await readySigner();
 
-  const tags = await getTagsLine();
+  const tags = options.appendTags === false ? '' : await getTagsLine();
   const body = tags ? `${text.trimEnd()}\n\n${tags}` : text;
   const payload = buildNotePayload(body, sensitive);
   const ciphertext = await state.signer.nip44Encrypt(state.account.pubkey, payload);
   const event = await state.signer.signEvent(buildNoteTemplate(ciphertext, Date.now()));
 
-  return publishOrQueue(state.account.pubkey, event, text.slice(0, 80), sourceUrl);
+  const snippet = (options.snippet || text).slice(0, 80);
+  return publishOrQueue(state.account.pubkey, event, snippet, sourceUrl);
+}
+
+export async function saveLink(
+  title: string | undefined,
+  url: string,
+  comment = '',
+  sensitive = false,
+): Promise<SaveOutcome> {
+  const text = formatPageNote({ comment, tags: await getTagsLine(), title, url });
+  return saveNote(text, sensitive, url, {
+    appendTags: false,
+    snippet: comment.trim() || title || url,
+  });
 }
 
 function filenameFromUrl(url: string, mime: string): string {
@@ -100,13 +121,18 @@ export async function savePage(
   if (!article) throw new Error('No readable article found on this page');
 
   const tab = await browser.tabs.get(tabId);
-  const text = formatCapture({
+  const title = article.title || tab.title;
+  const text = formatPageNote({
     comment,
-    selection: truncateBytes(compactNewlines(article.text), MAX_ARTICLE_BYTES),
-    title: article.title || tab.title,
+    tags: await getTagsLine(),
+    title,
     url: tab.url,
+    article: truncateBytes(compactNewlines(article.text), MAX_ARTICLE_BYTES),
   });
-  return saveNote(text, sensitive, tab.url);
+  return saveNote(text, sensitive, tab.url, {
+    appendTags: false,
+    snippet: comment.trim() || title || tab.url,
+  });
 }
 
 export async function saveImage(

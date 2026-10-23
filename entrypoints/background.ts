@@ -1,5 +1,5 @@
 import { formatCapture } from '@/utils/manent';
-import { saveNote, saveImage, savePage } from '@/utils/save';
+import { saveNote, saveLink, saveImage, savePage } from '@/utils/save';
 import type { SaveOutcome } from '@/utils/save';
 import { retryQueue } from '@/utils/queue';
 import { showPageToast } from '@/utils/toast';
@@ -90,9 +90,11 @@ export default defineBackground(() => {
       );
       return true;
     };
-    if (message?.type === 'save-note') {
+    if (message?.type === 'save-link') {
       return respond(
-        saveWithToast(message.tabId, () => saveNote(message.text, message.sensitive, message.url)),
+        saveWithToast(message.tabId, () =>
+          saveLink(message.title, message.url, message.comment, message.sensitive),
+        ),
       );
     }
     if (message?.type === 'save-page') {
