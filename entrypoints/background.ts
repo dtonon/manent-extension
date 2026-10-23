@@ -93,7 +93,7 @@ export default defineBackground(() => {
     if (message?.type === 'save-link') {
       return respond(
         saveWithToast(message.tabId, () =>
-          saveLink(message.title, message.url, message.comment, message.sensitive),
+          saveLink(message.title, message.url, message.comment, message.sensitive, message.tags),
         ),
       );
     }
@@ -101,7 +101,7 @@ export default defineBackground(() => {
       return respond(
         saveWithToast(
           message.tabId,
-          () => savePage(message.tabId, message.comment, message.sensitive),
+          () => savePage(message.tabId, message.comment, message.sensitive, message.tags),
           'Saving article to Manent…',
         ),
       );

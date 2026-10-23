@@ -14,7 +14,7 @@ import { addRecentSave } from './history';
 import { enqueue } from './queue';
 import { encryptFile, bytesToBase64 } from './file-crypto';
 import { getBlossomServers, uploadToBlossom } from './blossom';
-import { getTagsLine } from './tags';
+import { getTagsLine, normalizeTags } from './tags';
 
 export type SaveOutcome = 'published' | 'queued';
 
@@ -67,8 +67,9 @@ export async function saveLink(
   url: string,
   comment = '',
   sensitive = false,
+  tags?: string,
 ): Promise<SaveOutcome> {
-  const text = formatPageNote({ comment, tags: await getTagsLine(), title, url });
+  const text = formatPageNote({ comment, tags: await resolveTags(tags), title, url });
   return saveNote(text, sensitive, url, {
     appendTags: false,
     snippet: comment.trim() || title || url,
@@ -99,10 +100,16 @@ function truncateBytes(text: string, max: number): string {
   return cut.replace(/�+$/, '') + '\n[truncated]';
 }
 
+// Tags given for a single save win over the stored default
+async function resolveTags(tags?: string): Promise<string> {
+  return tags === undefined ? getTagsLine() : normalizeTags(tags);
+}
+
 export async function savePage(
   tabId: number,
   comment: string,
   sensitive = false,
+  tags?: string,
 ): Promise<SaveOutcome> {
   await readySigner();
 
@@ -124,7 +131,7 @@ export async function savePage(
   const title = article.title || tab.title;
   const text = formatPageNote({
     comment,
-    tags: await getTagsLine(),
+    tags: await resolveTags(tags),
     title,
     url: tab.url,
     article: truncateBytes(compactNewlines(article.text), MAX_ARTICLE_BYTES),
