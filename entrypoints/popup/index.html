@@ -144,11 +144,7 @@
       <div class="note-card">
         <label class="visually-hidden" for="comment">Comment</label>
         <textarea id="comment" class="note-comment" rows="1" placeholder="Add a comment..."></textarea>
-        <div class="note-source">
-          <span id="tab-title"></span>
-          <span id="tab-url" class="note-link"></span>
-        </div>
-        <label class="visually-hidden" for="tags">Tags, added at the bottom of the note</label>
+        <label class="visually-hidden" for="tags">Tags</label>
         <input
           id="tags"
           class="note-tags"
@@ -157,21 +153,24 @@
           spellcheck="false"
           autocomplete="off"
         />
+        <div class="note-source">
+          <span id="tab-title"></span>
+          <span id="tab-url" class="note-link"></span>
+          <span id="article-note" class="note-article" hidden>The full article text</span>
+        </div>
         <div class="note-foot">
           <button id="sensitive" class="chip-toggle" type="button" aria-pressed="false">
-            <span data-icon="visibilityOff" data-icon-size="12"></span>Sensitive
+            <span id="sensitive-icon" data-icon="visibility" data-icon-size="12"></span>Sensitive
           </button>
-          <span class="note-time">now</span>
+          <button id="full-article" class="chip-toggle" type="button" aria-pressed="false">
+            <span data-icon="article" data-icon-size="12"></span>Full article
+          </button>
         </div>
       </div>
       <div id="save-actions" class="actions">
         <button id="save-btn" class="btn" type="button">
-          <span class="btn-icon" data-icon="link" data-icon-size="18"></span>
-          <span class="btn-label">Save link</span>
-        </button>
-        <button id="save-article-btn" class="btn dim" type="button">
-          <span class="btn-icon" data-icon="article" data-icon-size="18"></span>
-          <span class="btn-label">Save article</span>
+          <span class="btn-icon" hidden></span>
+          <span class="btn-label">Save</span>
         </button>
       </div>
       <div id="save-result" class="result" hidden>
@@ -185,16 +184,13 @@
       <section id="recent-section" class="recent" aria-labelledby="recent-label" hidden>
         <h2 id="recent-label" class="section-label">Recent</h2>
         <ul id="recent" class="recent-list"></ul>
-        <button
-          id="recent-more"
-          class="text-btn"
-          type="button"
-          aria-expanded="false"
-          aria-controls="recent"
-          hidden
+        <a
+          class="recent-web"
+          href="https://manent.dtonon.com"
+          target="_blank"
+          rel="noopener"
+          >Show all on Manent web</a
         >
-          Show all
-        </button>
       </section>
     </section>
 

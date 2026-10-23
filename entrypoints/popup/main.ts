@@ -45,8 +45,8 @@ async function render() {
     $('tab-title').textContent = currentTab.url ? (currentTab.title ?? '') : 'No page to save';
     $('tab-url').textContent = currentTab.url ?? '';
     $('tab-url').hidden = !currentTab.url;
-    button('save-btn').disabled = !currentTab.url;
-    button('save-article-btn').disabled = !currentTab.id || !currentTab.url;
+    updateSaveControls();
+    input('comment').focus();
     await renderRecent();
     renderServers(state.account.pubkey);
     input('tags').value = await getRawTags();
@@ -118,8 +118,7 @@ for (const id of ['relays', 'blossom']) {
   });
 }
 
-const RECENT_COLLAPSED = 3;
-let recentExpanded = false;
+const RECENT_LIMIT = 5;
 
 function formatTime(ts: number): string {
   const date = new Date(ts);
@@ -136,12 +135,11 @@ async function renderRecent() {
     ...saved.map((s) => ({ snippet: s.snippet, ts: s.ts, pending: false })),
   ]
     .sort((a, b) => b.ts - a.ts)
-    .slice(0, 10);
+    .slice(0, RECENT_LIMIT);
 
   const list = $('recent');
   list.textContent = '';
-  const visible = recentExpanded ? items : items.slice(0, RECENT_COLLAPSED);
-  for (const item of visible) {
+  for (const item of items) {
     const li = document.createElement('li');
     li.className = 'recent-row';
     const text = document.createElement('span');
@@ -161,15 +159,7 @@ async function renderRecent() {
     list.appendChild(li);
   }
   $('recent-section').hidden = items.length === 0;
-  $('recent-more').hidden = items.length <= RECENT_COLLAPSED;
-  $('recent-more').textContent = recentExpanded ? 'Show less' : 'Show all';
-  $('recent-more').setAttribute('aria-expanded', String(recentExpanded));
 }
-
-$('recent-more').addEventListener('click', () => {
-  recentExpanded = !recentExpanded;
-  renderRecent();
-});
 
 async function retryPending() {
   await retryQueue();
@@ -259,14 +249,14 @@ function hideResult() {
   if (lostFocus) button('save-btn').focus();
 }
 
-async function runSave(buttonId: string, message: object) {
-  const btn = button(buttonId);
-  const icon = btn.querySelector('.btn-icon')!;
+async function runSave(message: object) {
+  const btn = button('save-btn');
+  const icon = btn.querySelector<HTMLElement>('.btn-icon')!;
   const label = btn.querySelector('.btn-label')!;
   const original = { icon: icon.innerHTML, label: label.textContent };
   hideResult();
-  button('save-btn').disabled = true;
-  button('save-article-btn').disabled = true;
+  btn.disabled = true;
+  icon.hidden = false;
   icon.innerHTML = '<span class="spinner"></span>';
   label.textContent = 'Saving…';
   $('save-live').textContent = 'Saving…';
@@ -281,9 +271,9 @@ async function runSave(buttonId: string, message: object) {
     showResult('error', e instanceof Error ? e.message : String(e));
   } finally {
     icon.innerHTML = original.icon;
+    icon.hidden = true;
     label.textContent = original.label;
-    button('save-btn').disabled = !currentTab.url;
-    button('save-article-btn').disabled = !currentTab.id || !currentTab.url;
+    updateSaveControls();
   }
 }
 
@@ -296,32 +286,49 @@ function growComment() {
 $('comment').addEventListener('input', growComment);
 
 $('sensitive').addEventListener('click', () => {
-  $('sensitive').setAttribute('aria-pressed', String(!isSensitive()));
+  const on = !isSensitive();
+  $('sensitive').setAttribute('aria-pressed', String(on));
+  $('sensitive-icon').innerHTML = iconSvg(on ? 'visibilityOff' : 'visibility', 12);
+});
+
+function isFullArticle(): boolean {
+  return $('full-article').getAttribute('aria-pressed') === 'true';
+}
+
+function updateSaveControls() {
+  const canSave = Boolean(currentTab.url && currentTab.id);
+  button('save-btn').disabled = !currentTab.url;
+  button('full-article').disabled = !canSave;
+  $('article-note').hidden = !isFullArticle();
+}
+
+$('full-article').addEventListener('click', () => {
+  $('full-article').setAttribute('aria-pressed', String(!isFullArticle()));
+  updateSaveControls();
 });
 
 $('save-btn').addEventListener('click', () => {
   if (!currentTab.url) return;
+  if (isFullArticle() && currentTab.id) {
+    runSave({
+      type: 'save-page',
+      tabId: currentTab.id,
+      comment: input('comment').value,
+      sensitive: isSensitive(),
+    });
+    return;
+  }
   const text = formatCapture({
     comment: input('comment').value,
     title: currentTab.title,
     url: currentTab.url,
   });
-  runSave('save-btn', {
+  runSave({
     type: 'save-note',
     text,
     sensitive: isSensitive(),
     url: currentTab.url,
     tabId: currentTab.id,
-  });
-});
-
-$('save-article-btn').addEventListener('click', () => {
-  if (!currentTab.id) return;
-  runSave('save-article-btn', {
-    type: 'save-page',
-    tabId: currentTab.id,
-    comment: input('comment').value,
-    sensitive: isSensitive(),
   });
 });
 
