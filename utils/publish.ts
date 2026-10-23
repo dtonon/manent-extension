@@ -12,7 +12,9 @@ export async function publishEvent(event: Event, relays: string[]): Promise<Publ
     const settled = await Promise.allSettled(pool.publish(relays, event));
     const result: PublishResult = { ok: [], failed: [] };
     settled.forEach((s, i) => {
-      (s.status === 'fulfilled' ? result.ok : result.failed).push(relays[i]);
+      // The pool resolves instead of rejecting when it cannot connect
+      const connected = s.status === 'fulfilled' && !String(s.value).startsWith('connection failure');
+      (connected ? result.ok : result.failed).push(relays[i]);
     });
     return result;
   } finally {
