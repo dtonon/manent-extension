@@ -147,6 +147,7 @@ export async function saveImage(
   pageTitle?: string,
   pageUrl?: string,
   comment?: string,
+  sensitive = false,
 ): Promise<SaveOutcome> {
   const state = await readySigner();
 
@@ -177,6 +178,7 @@ export async function saveImage(
     .filter(Boolean)
     .join('\n\n');
   if (caption) meta.caption = caption;
+  if (sensitive) meta.sensitive = true;
 
   if (encrypted.bytes.length < INLINE_LIMIT) {
     meta.data = bytesToBase64(encrypted.bytes);
