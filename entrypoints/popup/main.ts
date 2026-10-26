@@ -2,10 +2,9 @@ import * as nip19 from 'nostr-tools/nip19';
 import { loginWithKey, unlock, logout } from '@/utils/auth';
 import { getSignerState } from '@/utils/signer';
 import { refreshWriteRelays, getWriteRelays } from '@/utils/relays';
-import { getRecentSaves } from '@/utils/history';
 import { retryQueue, getQueue } from '@/utils/queue';
 import { getBlossomServers } from '@/utils/blossom';
-import { getRawTags, setTags } from '@/utils/tags';
+import { getRawTags, setTags, normalizeTags } from '@/utils/tags';
 import { renderIcons, iconSvg } from '@/utils/icons';
 
 const $ = (id: string) => document.getElementById(id)!;
@@ -21,7 +20,7 @@ async function askBackground(message: object): Promise<unknown> {
   return res.result;
 }
 
-let currentTab: { id?: number; title?: string; url?: string } = {};
+let currentTab: { id?: number; title?: string; url?: string; favIconUrl?: string } = {};
 
 async function render() {
   const state = await getSignerState();
@@ -40,15 +39,13 @@ async function render() {
     $('whoami').title = nip19.npubEncode(state.account.pubkey);
     $('signer-type').textContent = `Signer: ${SIGNER_LABELS[state.account.signerType]}`;
     const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
-    currentTab = { id: tab?.id, title: tab?.title, url: tab?.url };
-    $('tab-title').textContent = currentTab.url ? (currentTab.title ?? '') : 'No page to save';
-    $('tab-url').textContent = currentTab.url ?? '';
-    $('tab-url').hidden = !currentTab.url;
-    updateSaveControls();
-    input('comment').focus();
-    await renderRecent();
+    currentTab = { id: tab?.id, title: tab?.title, url: tab?.url, favIconUrl: tab?.favIconUrl };
+    renderPage();
+    showComposer(false);
+    await renderTags();
+    await renderPending();
+    renderShortcut().catch(() => {});
     renderServers(state.account.pubkey);
-    input('tags').value = await getRawTags();
   }
 }
 
@@ -117,52 +114,9 @@ for (const id of ['relays', 'blossom']) {
   });
 }
 
-const RECENT_LIMIT = 5;
-
-function formatTime(ts: number): string {
-  const date = new Date(ts);
-  if (date.toDateString() === new Date().toDateString()) {
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  }
-  return date.toLocaleDateString([], { day: 'numeric', month: 'short' });
-}
-
-async function renderRecent() {
-  const [saved, pending] = await Promise.all([getRecentSaves(), getQueue()]);
-  const items = [
-    ...pending.map((p) => ({ snippet: p.snippet, ts: p.ts, pending: true })),
-    ...saved.map((s) => ({ snippet: s.snippet, ts: s.ts, pending: false })),
-  ]
-    .sort((a, b) => b.ts - a.ts)
-    .slice(0, RECENT_LIMIT);
-
-  const list = $('recent');
-  list.textContent = '';
-  for (const item of items) {
-    const li = document.createElement('li');
-    li.className = 'recent-row';
-    const text = document.createElement('span');
-    text.className = 'recent-text';
-    text.textContent = item.snippet;
-    text.title = new Date(item.ts).toLocaleString();
-    const time = document.createElement('time');
-    time.className = 'recent-time';
-    time.dateTime = new Date(item.ts).toISOString();
-    time.textContent = formatTime(item.ts);
-    const status = document.createElement('span');
-    status.className = 'recent-status';
-    status.setAttribute('role', 'img');
-    status.setAttribute('aria-label', item.pending ? 'Waiting to sync' : 'Saved');
-    status.innerHTML = iconSvg(item.pending ? 'schedule' : 'check', 14);
-    li.append(text, time, status);
-    list.appendChild(li);
-  }
-  $('recent-section').hidden = items.length === 0;
-}
-
 async function retryPending() {
   await retryQueue();
-  await renderRecent();
+  await renderPending();
 }
 
 $('nsec-open').addEventListener('click', () => showLoginForm(true));
@@ -222,115 +176,244 @@ $('unlock-logout').addEventListener('click', async () => {
   await render();
 });
 
-let resultTimer: ReturnType<typeof setTimeout> | undefined;
+function renderPage() {
+  const url = currentTab.url;
+  let domain = '';
+  try {
+    const parsed = new URL(url ?? '');
+    domain = `${parsed.host}${parsed.pathname === '/' ? '' : parsed.pathname}`;
+  } catch {
+    domain = url ?? '';
+  }
+  $('tab-title').textContent = url ? currentTab.title || domain : 'No page to save';
+  $('tab-domain').textContent = domain;
+  const icon = $('page-icon');
+  icon.textContent = '';
+  icon.classList.remove('has-image');
+  if (currentTab.favIconUrl?.startsWith('http') || currentTab.favIconUrl?.startsWith('data:')) {
+    const img = document.createElement('img');
+    img.src = currentTab.favIconUrl;
+    img.alt = '';
+    img.addEventListener('error', () => {
+      img.remove();
+      icon.classList.remove('has-image');
+      icon.textContent = (currentTab.title || domain || '?').charAt(0).toUpperCase();
+    });
+    icon.appendChild(img);
+    icon.classList.add('has-image');
+  } else {
+    icon.textContent = (currentTab.title || domain || '?').charAt(0).toUpperCase();
+  }
+  const canSave = Boolean(url && currentTab.id);
+  for (const id of ['save-link', 'save-article', 'open-composer']) button(id).disabled = !canSave;
+}
 
-function isSensitive(): boolean {
-  return $('sensitive').getAttribute('aria-pressed') === 'true';
+async function renderTags() {
+  const raw = await getRawTags();
+  $('tags-view').textContent = normalizeTags(raw) || 'none';
+  input('tags').value = raw;
+}
+
+async function renderPending() {
+  const count = (await getQueue()).length;
+  $('pending-line').hidden = count === 0;
+  $('pending-count').textContent = String(count);
+}
+
+// Toasts cannot be injected in browser pages, so there the popup stays open to show the result
+function pageShowsToast(): boolean {
+  return /^(https?|file):/.test(currentTab.url ?? '');
+}
+
+function setSensitiveChip(on: boolean) {
+  $('sensitive').setAttribute('aria-pressed', String(on));
+  $('sensitive-icon').innerHTML = iconSvg(on ? 'visibilityOff' : 'visibility', 12);
+}
+
+function showComposer(open: boolean) {
+  $('quick-menu').hidden = open;
+  $('composer').hidden = !open;
+  $('tags-line').hidden = open;
+  $('tags-form').hidden = true;
+  $('save-result').hidden = true;
+  if (open) {
+    setSensitiveChip(false);
+    input('composer-tags').value = input('tags').value;
+    input('comment').focus();
+  } else {
+    input('comment').value = '';
+    $('full-article').setAttribute('aria-pressed', 'false');
+    $('quick-menu').querySelector<HTMLButtonElement>('.quick-item:not(:disabled)')?.focus();
+  }
 }
 
 function showResult(kind: 'published' | 'queued' | 'error', text: string) {
   const icon = kind === 'published' ? 'checkCircle' : kind === 'queued' ? 'schedule' : 'syncProblem';
   $('save-result-icon').innerHTML = iconSvg(icon, 20);
   $('save-result-text').textContent = text;
-  $('save-open').hidden = kind === 'error';
   $('save-result').hidden = false;
   $('save-live').textContent = text;
-  // Errors keep the buttons visible so the save can be retried
-  $('save-actions').hidden = kind !== 'error';
-  clearTimeout(resultTimer);
-  resultTimer = setTimeout(hideResult, kind === 'error' ? 6000 : 3000);
 }
 
-function hideResult() {
-  const lostFocus = document.activeElement === document.body;
-  $('save-result').hidden = true;
-  $('save-actions').hidden = false;
-  if (lostFocus) button('save-btn').focus();
-}
-
-async function runSave(message: object) {
-  const btn = button('save-btn');
-  const icon = btn.querySelector<HTMLElement>('.btn-icon')!;
-  const label = btn.querySelector('.btn-label')!;
-  const original = { icon: icon.innerHTML, label: label.textContent };
-  hideResult();
-  btn.disabled = true;
-  icon.hidden = false;
-  icon.innerHTML = '<span class="spinner"></span>';
+async function runSave(trigger: HTMLButtonElement, message: object) {
+  const label = trigger.querySelector('.quick-label, .btn-label')!;
+  const original = label.textContent;
+  trigger.disabled = true;
   label.textContent = 'Saving…';
   $('save-live').textContent = 'Saving…';
+  if (pageShowsToast()) {
+    // The worker owns the save and the page toast confirms it, so the popup can go
+    browser.runtime.sendMessage(message).catch(() => {});
+    setTimeout(() => window.close(), 150);
+    return;
+  }
   try {
     const outcome = await askBackground(message);
-    input('comment').value = '';
-    growComment();
     if (outcome === 'published') showResult('published', 'Saved to Manent');
     else showResult('queued', 'Queued, will retry later');
-    await renderRecent();
+    if (!$('composer').hidden) showComposer(false);
   } catch (e) {
     showResult('error', e instanceof Error ? e.message : String(e));
   } finally {
-    icon.innerHTML = original.icon;
-    icon.hidden = true;
-    label.textContent = original.label;
-    updateSaveControls();
+    label.textContent = original;
+    trigger.disabled = false;
+    renderPending();
   }
 }
 
-function growComment() {
-  const el = $('comment');
-  el.style.height = 'auto';
-  el.style.height = `${el.scrollHeight}px`;
-}
-
-$('comment').addEventListener('input', growComment);
-
-$('sensitive').addEventListener('click', () => {
-  const on = !isSensitive();
-  $('sensitive').setAttribute('aria-pressed', String(on));
-  $('sensitive-icon').innerHTML = iconSvg(on ? 'visibilityOff' : 'visibility', 12);
-});
-
-function isFullArticle(): boolean {
-  return $('full-article').getAttribute('aria-pressed') === 'true';
-}
-
-function updateSaveControls() {
-  const canSave = Boolean(currentTab.url && currentTab.id);
-  button('save-btn').disabled = !currentTab.url;
-  button('full-article').disabled = !canSave;
-  $('article-note').hidden = !isFullArticle();
-}
-
-$('full-article').addEventListener('click', () => {
-  $('full-article').setAttribute('aria-pressed', String(!isFullArticle()));
-  updateSaveControls();
-});
-
-$('save-btn').addEventListener('click', async () => {
+function saveLink() {
   if (!currentTab.url) return;
-  // The tags field may not have fired change yet, the worker reads tags from storage
-  await setTags(input('tags').value).catch(() => {});
-  if (isFullArticle() && currentTab.id) {
-    runSave({
-      type: 'save-page',
-      tabId: currentTab.id,
-      comment: input('comment').value,
-      sensitive: isSensitive(),
-    });
-    return;
-  }
-  runSave({
+  runSave(button('save-link'), {
     type: 'save-link',
     title: currentTab.title,
     url: currentTab.url,
-    comment: input('comment').value,
-    sensitive: isSensitive(),
+    comment: '',
+    sensitive: false,
     tabId: currentTab.id,
   });
+}
+
+function saveArticle() {
+  if (!currentTab.id) return;
+  runSave(button('save-article'), {
+    type: 'save-page',
+    tabId: currentTab.id,
+    comment: '',
+    sensitive: false,
+  });
+}
+
+$('save-link').addEventListener('click', saveLink);
+$('save-article').addEventListener('click', saveArticle);
+$('open-composer').addEventListener('click', () => showComposer(true));
+$('composer-close').addEventListener('click', () => showComposer(false));
+
+$('sensitive').addEventListener('click', () => {
+  setSensitiveChip($('sensitive').getAttribute('aria-pressed') !== 'true');
 });
 
-$('tags').addEventListener('change', () => {
-  setTags(input('tags').value).catch(() => {});
+$('full-article').addEventListener('click', () => {
+  const on = $('full-article').getAttribute('aria-pressed') !== 'true';
+  $('full-article').setAttribute('aria-pressed', String(on));
+});
+
+$('comment').addEventListener('input', () => {
+  const el = $('comment');
+  el.style.height = 'auto';
+  el.style.height = `${el.scrollHeight}px`;
+});
+
+$('composer').addEventListener('submit', (e) => {
+  e.preventDefault();
+  if (!currentTab.url) return;
+  const common = {
+    comment: input('comment').value,
+    sensitive: $('sensitive').getAttribute('aria-pressed') === 'true',
+    tags: input('composer-tags').value,
+  };
+  if ($('full-article').getAttribute('aria-pressed') === 'true' && currentTab.id) {
+    runSave(button('save-btn'), { type: 'save-page', tabId: currentTab.id, ...common });
+  } else {
+    runSave(button('save-btn'), {
+      type: 'save-link',
+      title: currentTab.title,
+      url: currentTab.url,
+      tabId: currentTab.id,
+      ...common,
+    });
+  }
+});
+
+$('comment').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+    e.preventDefault();
+    $('composer').dispatchEvent(new Event('submit', { cancelable: true }));
+  }
+});
+
+$('tags-change').addEventListener('click', () => {
+  $('tags-line').hidden = true;
+  $('tags-form').hidden = false;
+  input('tags').focus();
+  input('tags').select();
+});
+
+$('tags-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  await setTags(input('tags').value).catch(() => {});
+  await renderTags();
+  $('tags-form').hidden = true;
+  $('tags-line').hidden = false;
+  button('tags-change').focus();
+});
+
+const shortcutCommands = browser.commands as typeof browser.commands & {
+  openShortcutSettings?: () => Promise<void>;
+};
+// Firefox before 137 has no API for its shortcut settings, and extensions cannot open about:addons
+const canOpenShortcutSettings =
+  Boolean(shortcutCommands.openShortcutSettings) || location.protocol !== 'moz-extension:';
+
+async function renderShortcut() {
+  const commands = await browser.commands.getAll();
+  const shortcut = commands.find((c) => c.name === '_execute_action')?.shortcut;
+  const text = shortcut ? `Open with ${shortcut}` : 'No keyboard shortcut';
+  const action = shortcut ? 'change it' : 'set one';
+  $('shortcut-text').textContent = canOpenShortcutSettings
+    ? text
+    : `${text} · ${action} in about:addons › Manage Extension Shortcuts`;
+  $('shortcut-action').hidden = !canOpenShortcutSettings;
+  $('shortcut-change').textContent = shortcut ? 'change' : 'set one';
+}
+
+$('shortcut-change').addEventListener('click', async () => {
+  // Firefox has its own settings page; Chrome only allows editing shortcuts on chrome://extensions
+  if (shortcutCommands.openShortcutSettings) await shortcutCommands.openShortcutSettings();
+  else await browser.tabs.create({ url: 'chrome://extensions/shortcuts' });
+  window.close();
+});
+
+$('retry').addEventListener('click', () => retryPending().catch(() => {}));
+
+// Menu keys: arrows move, 1-3 run the actions, Esc leaves the composer
+document.addEventListener('keydown', (e) => {
+  if ($('main').hidden || !$('account-menu').hidden) return;
+  const typing = e.target instanceof HTMLElement && e.target.matches('input, textarea');
+  if (e.key === 'Escape' && !$('composer').hidden) {
+    e.preventDefault();
+    showComposer(false);
+    return;
+  }
+  if (typing || $('quick-menu').hidden) return;
+  const items = [...$('quick-menu').querySelectorAll<HTMLButtonElement>('.quick-item:not(:disabled)')];
+  const index = items.indexOf(document.activeElement as HTMLButtonElement);
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    const step = e.key === 'ArrowDown' ? 1 : -1;
+    items[(index + step + items.length) % items.length]?.focus();
+  } else if (e.key === '1') saveLink();
+  else if (e.key === '2') saveArticle();
+  else if (e.key === '3' && !button('open-composer').disabled) showComposer(true);
 });
 
 $('logout-btn').addEventListener('click', async () => {
