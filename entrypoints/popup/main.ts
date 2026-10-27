@@ -6,6 +6,8 @@ import { retryQueue, getQueue } from '@/utils/queue';
 import { getBlossomServers } from '@/utils/blossom';
 import { getRawTags, setTags, normalizeTags } from '@/utils/tags';
 import { renderIcons, iconSvg } from '@/utils/icons';
+import { takePendingImage, PENDING_IMAGE_KEY } from '@/utils/pending-image';
+import type { PendingImage } from '@/utils/pending-image';
 
 const $ = (id: string) => document.getElementById(id)!;
 const input = (id: string) => $(id) as HTMLInputElement;
@@ -45,6 +47,7 @@ async function render() {
     await renderTags();
     await renderPending();
     renderShortcut().catch(() => {});
+    await checkPendingImage();
     renderServers(state.account.pubkey);
   }
 }
@@ -230,7 +233,37 @@ function setSensitiveChip(on: boolean) {
   $('sensitive-icon').innerHTML = iconSvg(on ? 'visibilityOff' : 'visibility', 12);
 }
 
+let pendingImage: PendingImage | null = null;
+
+async function checkPendingImage() {
+  const image = await takePendingImage().catch(() => null);
+  if (image) openImageComposer(image);
+}
+
+// The menu click may open the popup before the worker has stored the image
+browser.storage.onChanged.addListener((changes, area) => {
+  if (area === 'session' && changes[PENDING_IMAGE_KEY]?.newValue && !$('main').hidden) {
+    checkPendingImage();
+  }
+});
+
+function openImageComposer(image: PendingImage) {
+  pendingImage = image;
+  showComposer(true);
+  const img = $('composer-image') as HTMLImageElement;
+  img.src = image.srcUrl;
+  img.hidden = false;
+  $('composer-title').textContent = 'Save image with comment';
+  $('full-article').hidden = true;
+}
+
 function showComposer(open: boolean) {
+  if (!open || !pendingImage) {
+    pendingImage = open ? pendingImage : null;
+    ($('composer-image') as HTMLImageElement).hidden = true;
+    $('composer-title').textContent = 'Save with comment';
+    $('full-article').hidden = false;
+  }
   $('quick-menu').hidden = open;
   $('composer').hidden = !open;
   $('tags-line').hidden = open;
@@ -325,12 +358,23 @@ $('comment').addEventListener('input', () => {
 
 $('composer').addEventListener('submit', (e) => {
   e.preventDefault();
-  if (!currentTab.url) return;
   const common = {
     comment: input('comment').value,
     sensitive: $('sensitive').getAttribute('aria-pressed') === 'true',
     tags: input('composer-tags').value,
   };
+  if (pendingImage) {
+    runSave(button('save-btn'), {
+      type: 'save-image',
+      srcUrl: pendingImage.srcUrl,
+      title: pendingImage.title,
+      pageUrl: pendingImage.pageUrl,
+      tabId: pendingImage.tabId,
+      ...common,
+    });
+    return;
+  }
+  if (!currentTab.url) return;
   if ($('full-article').getAttribute('aria-pressed') === 'true' && currentTab.id) {
     runSave(button('save-btn'), { type: 'save-page', tabId: currentTab.id, ...common });
   } else {

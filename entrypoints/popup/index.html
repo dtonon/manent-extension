@@ -170,7 +170,7 @@
       <form id="composer" class="composer" hidden>
         <div class="composer-head">
           <span data-icon="editNote" data-icon-size="16"></span>
-          <h2 class="composer-title">Save with comment</h2>
+          <h2 id="composer-title" class="composer-title">Save with comment</h2>
           <button
             id="composer-close"
             class="icon-btn"
@@ -180,6 +180,7 @@
             data-icon-size="18"
           ></button>
         </div>
+        <img id="composer-image" class="composer-image" alt="Image to save" hidden />
         <label class="visually-hidden" for="comment">Comment</label>
         <textarea id="comment" class="note-comment" rows="2" placeholder="Add a comment..."></textarea>
         <label class="visually-hidden" for="composer-tags">Tags for this note</label>

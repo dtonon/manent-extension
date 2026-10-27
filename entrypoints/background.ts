@@ -4,6 +4,8 @@ import type { SaveOutcome } from '@/utils/save';
 import { retryQueue } from '@/utils/queue';
 import { showPageToast } from '@/utils/toast';
 import { askImageComment } from '@/utils/comment-dialog';
+import { PENDING_IMAGE_KEY } from '@/utils/pending-image';
+import type { PendingImage } from '@/utils/pending-image';
 import { loginWithNip07 } from '@/utils/nip07';
 import { refreshWriteRelays } from '@/utils/relays';
 
@@ -97,6 +99,23 @@ export default defineBackground(() => {
         ),
       );
     }
+    if (message?.type === 'save-image') {
+      return respond(
+        saveWithToast(
+          message.tabId,
+          () =>
+            saveImage(
+              message.srcUrl,
+              message.title,
+              message.pageUrl,
+              message.comment,
+              message.sensitive,
+              message.tags,
+            ),
+          'Saving image to Manent…',
+        ),
+      );
+    }
     if (message?.type === 'save-page') {
       return respond(
         saveWithToast(
@@ -133,6 +152,27 @@ export default defineBackground(() => {
       action = () => saveImage(srcUrl, tab?.title, pageUrl);
     } else if (info.menuItemId === MENU_IMAGE_COMMENT && info.srcUrl && tab?.id) {
       const srcUrl = info.srcUrl;
+      const pending: PendingImage = {
+        srcUrl,
+        title: tab.title,
+        pageUrl,
+        tabId: tab.id,
+        ts: Date.now(),
+      };
+      // openPopup must run right away, while the menu click still counts as a user action
+      browser.storage.session.set({ [PENDING_IMAGE_KEY]: pending }).catch(() => {});
+      const popupAction = getAction() as { openPopup?: () => Promise<void> };
+      const opened = popupAction.openPopup
+        ? await popupAction
+            .openPopup()
+            .then(() => true)
+            .catch((e) => {
+              console.warn('Manent: cannot open the popup, using the page dialog', e);
+              return false;
+            })
+        : (console.warn('Manent: action.openPopup is not available, using the page dialog'), false);
+      if (opened) return;
+      await browser.storage.session.remove(PENDING_IMAGE_KEY).catch(() => {});
       const comment = await askImageComment(tab.id, srcUrl);
       if (comment === null) return;
       loadingMessage = 'Saving image to Manent…';

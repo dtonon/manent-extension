@@ -747,3 +747,14 @@ textarea.input {
   font-size: 13px;
 }
 
+
+.composer-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 240px;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  background: var(--card-dim);
+  object-fit: cover;
+}
