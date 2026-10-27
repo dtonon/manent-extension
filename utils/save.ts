@@ -2,7 +2,6 @@ import type { Event } from 'nostr-tools/pure';
 import {
   buildNotePayload,
   buildNoteTemplate,
-  formatCapture,
   formatPageNote,
   FILE_NOTE_KIND,
 } from './manent';
@@ -148,6 +147,7 @@ export async function saveImage(
   pageUrl?: string,
   comment?: string,
   sensitive = false,
+  tags?: string,
 ): Promise<SaveOutcome> {
   const state = await readySigner();
 
@@ -173,10 +173,12 @@ export async function saveImage(
     meta.dim = `${bitmap.width}x${bitmap.height}`;
     bitmap.close();
   } catch {}
-  const tags = await getTagsLine();
-  const caption = [comment?.trim(), formatCapture({ title: pageTitle, url: pageUrl }), tags]
-    .filter(Boolean)
-    .join('\n\n');
+  const caption = formatPageNote({
+    comment,
+    tags: await resolveTags(tags),
+    title: pageTitle,
+    url: pageUrl,
+  });
   if (caption) meta.caption = caption;
   if (sensitive) meta.sensitive = true;
 
