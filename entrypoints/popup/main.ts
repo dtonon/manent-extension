@@ -271,7 +271,7 @@ function showComposer(open: boolean) {
   $('save-result').hidden = true;
   if (open) {
     setSensitiveChip(false);
-    input('composer-tags').value = input('tags').value;
+    setComposerTags(normalizeTags(input('tags').value).split(' ').filter(Boolean));
     input('comment').focus();
   } else {
     input('comment').value = '';
@@ -279,6 +279,57 @@ function showComposer(open: boolean) {
     $('quick-menu').querySelector<HTMLButtonElement>('.quick-item:not(:disabled)')?.focus();
   }
 }
+
+let composerTags: string[] = [];
+
+function setComposerTags(tags: string[]) {
+  composerTags = [...new Set(tags)];
+  const box = $('tag-chips');
+  box.querySelectorAll('.tag-chip').forEach((chip) => chip.remove());
+  for (const tag of composerTags) {
+    const chip = document.createElement('span');
+    chip.className = 'tag-chip';
+    const label = document.createElement('span');
+    label.textContent = tag;
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'tag-remove';
+    remove.setAttribute('aria-label', `Remove ${tag}`);
+    remove.innerHTML = iconSvg('close', 12);
+    remove.addEventListener('click', () => {
+      setComposerTags(composerTags.filter((t) => t !== tag));
+      input('tag-add').focus();
+    });
+    chip.append(label, remove);
+    box.insertBefore(chip, input('tag-add'));
+  }
+}
+
+function pendingTagText(): string[] {
+  return normalizeTags(input('tag-add').value).split(' ').filter(Boolean);
+}
+
+function commitTagText() {
+  const added = pendingTagText();
+  input('tag-add').value = '';
+  if (added.length) setComposerTags([...composerTags, ...added]);
+}
+
+$('tag-add').addEventListener('keydown', (e) => {
+  const field = input('tag-add');
+  if (e.key === 'Enter' || e.key === ' ' || e.key === ',') {
+    if (!field.value.trim()) return;
+    e.preventDefault();
+    commitTagText();
+  } else if (e.key === 'Backspace' && !field.value && composerTags.length) {
+    e.preventDefault();
+    setComposerTags(composerTags.slice(0, -1));
+  }
+});
+$('tag-add').addEventListener('blur', commitTagText);
+$('tag-chips').addEventListener('click', (e) => {
+  if (e.target === $('tag-chips')) input('tag-add').focus();
+});
 
 function showResult(kind: 'published' | 'queued' | 'error', text: string) {
   const icon = kind === 'published' ? 'checkCircle' : kind === 'queued' ? 'schedule' : 'syncProblem';
@@ -361,7 +412,7 @@ $('composer').addEventListener('submit', (e) => {
   const common = {
     comment: input('comment').value,
     sensitive: $('sensitive').getAttribute('aria-pressed') === 'true',
-    tags: input('composer-tags').value,
+    tags: [...composerTags, ...pendingTagText()].join(' '),
   };
   if (pendingImage) {
     runSave(button('save-btn'), {

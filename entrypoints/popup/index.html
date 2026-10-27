@@ -183,15 +183,17 @@
         <img id="composer-image" class="composer-image" alt="Image to save" hidden />
         <label class="visually-hidden" for="comment">Comment</label>
         <textarea id="comment" class="note-comment" rows="2" placeholder="Add a comment..."></textarea>
-        <label class="visually-hidden" for="composer-tags">Tags for this note</label>
-        <input
-          id="composer-tags"
-          class="note-tags"
-          type="text"
-          placeholder="+ tag"
-          spellcheck="false"
-          autocomplete="off"
-        />
+        <div id="tag-chips" class="tag-chips" role="group" aria-label="Tags for this note">
+          <label class="visually-hidden" for="tag-add">Add a tag</label>
+          <input
+            id="tag-add"
+            class="tag-add"
+            type="text"
+            placeholder="+ tag"
+            spellcheck="false"
+            autocomplete="off"
+          />
+        </div>
         <div class="note-foot">
           <button id="sensitive" class="chip-toggle" type="button" aria-pressed="false">
             <span id="sensitive-icon" data-icon="visibility" data-icon-size="12"></span>Sensitive

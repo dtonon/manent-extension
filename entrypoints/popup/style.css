@@ -758,3 +758,63 @@ textarea.input {
   background: var(--card-dim);
   object-fit: cover;
 }
+
+/* Tags as removable chips, as the app's will-tag strip */
+.tag-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  cursor: text;
+}
+
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 2px 2px 10px;
+  border-radius: 12px;
+  background: var(--card-dim);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.tag-remove {
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--text-2);
+  cursor: pointer;
+}
+
+.tag-remove:hover {
+  background: var(--border);
+  color: var(--text);
+}
+
+.tag-add {
+  flex: 1;
+  min-width: 80px;
+  padding: 3px 0;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-weight: 600;
+}
+
+.tag-add::placeholder {
+  color: var(--hint);
+  font-weight: 400;
+}
+
+.tag-add:focus {
+  outline: none;
+  border-bottom-color: var(--input-border);
+}
