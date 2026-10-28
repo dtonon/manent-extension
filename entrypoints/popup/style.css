@@ -560,6 +560,8 @@ textarea.input {
   color: #ffffff;
   font-weight: 700;
   overflow: hidden;
+  order: 1;
+  align-self: flex-start;
 }
 
 .page-icon img {
@@ -576,6 +578,7 @@ textarea.input {
   flex-direction: column;
   gap: 2px;
   min-width: 0;
+  flex: 1;
 }
 
 .page-title {
