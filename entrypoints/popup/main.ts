@@ -491,6 +491,12 @@ $('shortcut-change').addEventListener('click', async () => {
 
 $('retry').addEventListener('click', () => retryPending().catch(() => {}));
 
+// The mouse takes over from the keyboard selection, so only the hovered row is highlighted
+$('quick-menu').addEventListener('mousemove', () => {
+  const active = document.activeElement as HTMLElement | null;
+  if (active?.classList.contains('quick-item')) active.blur();
+});
+
 // Menu keys: arrows move, 1-3 run the actions, Esc leaves the composer
 document.addEventListener('keydown', (e) => {
   if ($('main').hidden || !$('account-menu').hidden) return;
