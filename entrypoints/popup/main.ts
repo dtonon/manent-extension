@@ -267,6 +267,7 @@ function showComposer(open: boolean) {
   $('quick-menu').hidden = open;
   $('composer').hidden = !open;
   $('tags-line').hidden = open;
+  $('shortcut-line').hidden = open;
   $('tags-form').hidden = true;
   $('save-result').hidden = true;
   if (open) {
