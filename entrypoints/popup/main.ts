@@ -1,4 +1,5 @@
 import * as nip19 from 'nostr-tools/nip19';
+import { MANENT_URL } from '@/utils/manent';
 import { loginWithKey, unlock, logout } from '@/utils/auth';
 import { getSignerState } from '@/utils/signer';
 import { refreshWriteRelays, getWriteRelays } from '@/utils/relays';
@@ -525,5 +526,6 @@ $('logout-btn').addEventListener('click', async () => {
 });
 
 renderIcons();
+($('open-manent') as HTMLAnchorElement).href = MANENT_URL;
 browser.runtime.sendMessage('ping').catch(() => {});
 render().then(() => retryPending().catch(() => {}));

@@ -3,6 +3,8 @@ import type { EventTemplate } from 'nostr-tools/pure';
 export const TEXT_NOTE_KIND = 33301;
 export const FILE_NOTE_KIND = 33302;
 
+export const MANENT_URL = 'https://manent.dtonon.com';
+
 // Hex ms timestamp plus 6 random hex chars, Manent parses it back as creation time
 export function generateNoteId(nowMs: number): string {
   const rand = crypto.getRandomValues(new Uint8Array(3));

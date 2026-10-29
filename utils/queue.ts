@@ -2,7 +2,6 @@ import type { Event } from 'nostr-tools/pure';
 import { getAccount } from './auth';
 import { getWriteRelays } from './relays';
 import { publishEvent } from './publish';
-import { addRecentSave } from './history';
 
 export interface PendingItem {
   event: Event;
@@ -38,11 +37,7 @@ export async function retryQueue(): Promise<number> {
   const remaining: PendingItem[] = [];
   for (const item of queue) {
     const result = await publishEvent(item.event, relays);
-    if (result.ok.length > 0) {
-      await addRecentSave({ snippet: item.snippet, url: item.url, ts: item.ts });
-    } else {
-      remaining.push(item);
-    }
+    if (result.ok.length === 0) remaining.push(item);
   }
   await setQueue(remaining);
   return remaining.length;

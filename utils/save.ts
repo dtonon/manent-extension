@@ -9,7 +9,6 @@ import { getSignerState } from './signer';
 import type { SignerState } from './signer';
 import { getWriteRelays } from './relays';
 import { publishEvent } from './publish';
-import { addRecentSave } from './history';
 import { enqueue } from './queue';
 import { encryptFile, bytesToBase64 } from './file-crypto';
 import { getBlossomServers, uploadToBlossom } from './blossom';
@@ -38,7 +37,6 @@ async function publishOrQueue(
     await enqueue({ event, snippet, url: sourceUrl, ts: Date.now() });
     return 'queued';
   }
-  await addRecentSave({ snippet, url: sourceUrl, ts: Date.now() });
   return 'published';
 }
 

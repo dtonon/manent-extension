@@ -1,5 +1,5 @@
 import { ICON_PATHS } from './icons';
-import { MANENT_URL } from './history';
+import { MANENT_URL } from './manent';
 
 export type ToastState = 'loading' | 'published' | 'queued' | 'error';
 
