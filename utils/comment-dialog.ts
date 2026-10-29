@@ -25,7 +25,7 @@ function showCommentDialog(opts: DialogOptions): Promise<string | null> {
         --hint: #9e9e9e; --icon: #9e9e9e; --accent: #e32a6d;
         box-sizing: border-box; width: 100%; max-width: 420px; border-radius: 16px; overflow: hidden;
         background: var(--card); color: var(--text); box-shadow: 0 12px 40px rgba(0,0,0,.4);
-        font: 14px/1.3 Roboto, system-ui, -apple-system, 'Segoe UI', sans-serif;
+        font: 14px/1.3 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
         -webkit-font-smoothing: antialiased;
       }
       @media (prefers-color-scheme: dark) {

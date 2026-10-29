@@ -27,7 +27,7 @@ function renderToast(opts: ToastOptions) {
         --card: #ffffff; --text: rgba(0,0,0,.867); --text-2: #757575; --accent: #e32a6d; --icon: #9e9e9e;
         box-sizing: border-box; width: 300px; padding: 12px 14px 8px; border-radius: 8px;
         background: var(--card); color: var(--text); box-shadow: 0 6px 24px rgba(0,0,0,.22);
-        font: 14px/1.3 Roboto, system-ui, -apple-system, 'Segoe UI', sans-serif;
+        font: 14px/1.3 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
         -webkit-font-smoothing: antialiased;
       }
       @media (prefers-color-scheme: dark) {
