@@ -8,6 +8,7 @@ import { PENDING_IMAGE_KEY } from '@/utils/pending-image';
 import type { PendingImage } from '@/utils/pending-image';
 import { loginWithNip07 } from '@/utils/nip07';
 import { refreshWriteRelays } from '@/utils/relays';
+import { refreshProfile } from '@/utils/profile';
 
 const MENU_SELECTION = 'save-selection';
 const MENU_IMAGE = 'save-image';
@@ -131,6 +132,9 @@ export default defineBackground(() => {
           await refreshWriteRelays(account.pubkey).catch(() => {});
         }),
       );
+    }
+    if (message?.type === 'refresh-profile') {
+      return respond(refreshProfile(message.pubkey));
     }
   });
 

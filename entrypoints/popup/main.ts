@@ -9,6 +9,8 @@ import { getRawTags, setTags, normalizeTags } from '@/utils/tags';
 import { renderIcons, iconSvg } from '@/utils/icons';
 import { takePendingImage, PENDING_IMAGE_KEY } from '@/utils/pending-image';
 import type { PendingImage } from '@/utils/pending-image';
+import { getProfile, isProfileStale, PROFILE_KEY } from '@/utils/profile';
+import type { Profile } from '@/utils/profile';
 
 const $ = (id: string) => document.getElementById(id)!;
 const input = (id: string) => $(id) as HTMLInputElement;
@@ -33,6 +35,7 @@ async function render() {
   $('avatar-btn').hidden = state.status !== 'ready';
   if (state.status !== 'ready') closeMenu(false);
   if (state.status === 'none') showLoginForm(false);
+  if (state.status !== 'none') renderProfile(state.account.pubkey);
   if (state.status === 'locked') {
     $('unlock-npub').textContent = shortNpub(state.account.pubkey);
     input('unlock-password').focus();
@@ -52,6 +55,46 @@ async function render() {
     renderServers(state.account.pubkey);
   }
 }
+
+let shownPubkey = '';
+
+async function renderProfile(pubkey: string) {
+  shownPubkey = pubkey;
+  const profile = await getProfile(pubkey);
+  showProfile(profile);
+  if (isProfileStale(profile)) {
+    browser.runtime.sendMessage({ type: 'refresh-profile', pubkey }).catch(() => {});
+  }
+}
+
+function showProfile(profile: Profile | null) {
+  for (const id of ['avatar-btn', 'unlock-avatar']) setAvatarPicture($(id), profile?.picture);
+  $('whoami-name').textContent = profile?.name ?? '';
+  $('whoami-name').hidden = !profile?.name;
+  $('avatar-btn').setAttribute('aria-label', profile?.name ? `Account, ${profile.name}` : 'Account');
+}
+
+// The person icon stays underneath until the picture loads, and when it fails
+function setAvatarPicture(avatar: HTMLElement, url: string | undefined) {
+  const current = avatar.querySelector('img');
+  if (current?.getAttribute('src') === url) return;
+  current?.remove();
+  if (!url) return;
+  const img = document.createElement('img');
+  img.className = 'avatar-picture';
+  img.alt = '';
+  img.referrerPolicy = 'no-referrer';
+  img.hidden = true;
+  img.addEventListener('load', () => (img.hidden = false));
+  img.addEventListener('error', () => img.remove());
+  img.src = url;
+  avatar.appendChild(img);
+}
+
+browser.storage.onChanged.addListener((changes, area) => {
+  const profile = changes[PROFILE_KEY]?.newValue as Profile | undefined;
+  if (area === 'local' && profile?.pubkey === shownPubkey) showProfile(profile);
+});
 
 function shortNpub(pubkey: string): string {
   const npub = nip19.npubEncode(pubkey);

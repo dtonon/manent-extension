@@ -4,6 +4,7 @@ import * as nip19 from 'nostr-tools/nip19';
 import * as nip49 from 'nostr-tools/nip49';
 import { clearWriteRelays } from './relays';
 import { clearBlossomServers } from './blossom';
+import { clearProfile } from './profile';
 
 export type SignerType = 'nsec' | 'ncryptsec' | 'nip07';
 
@@ -86,6 +87,7 @@ export async function logout(): Promise<void> {
   await browser.storage.session.remove(SESSION_PRIVKEY);
   await clearWriteRelays();
   await clearBlossomServers();
+  await clearProfile();
 }
 
 export async function getPrivkey(account: Account): Promise<Uint8Array | null> {

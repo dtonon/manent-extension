@@ -329,6 +329,16 @@ textarea.input {
   background: var(--accent);
   color: var(--on-accent);
   flex: none;
+  position: relative;
+  overflow: hidden;
+}
+
+.avatar-picture {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .avatar.large {
@@ -532,6 +542,12 @@ textarea.input {
   gap: 4px;
   padding: 10px 16px 12px;
   color: var(--text-2);
+}
+
+.whoami-name {
+  color: var(--text);
+  font-weight: 600;
+  overflow-wrap: anywhere;
 }
 
 @media (prefers-reduced-motion: reduce) {
