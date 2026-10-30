@@ -13,7 +13,6 @@ import { refreshProfile } from '@/utils/profile';
 
 const MENU_SELECTION = 'save-selection';
 const MENU_IMAGE = 'save-image';
-const MENU_IMAGE_COMMENT = 'save-image-comment';
 const MENU_PAGE = 'save-page';
 
 function getAction() {
@@ -84,12 +83,7 @@ export default defineBackground(() => {
       });
       browser.contextMenus.create({
         id: MENU_IMAGE,
-        title: 'Save image',
-        contexts: ['image'],
-      });
-      browser.contextMenus.create({
-        id: MENU_IMAGE_COMMENT,
-        title: 'Save image with comment',
+        title: 'Save image to Manent',
         contexts: ['image'],
       });
       browser.contextMenus.create({
@@ -193,11 +187,7 @@ export default defineBackground(() => {
       if (comment === null) return;
       const tags = await getHighlightTagsLine();
       action = () => saveSelection(text, tab?.title, pageUrl, comment, false, tags);
-    } else if (info.menuItemId === MENU_IMAGE && info.srcUrl) {
-      const srcUrl = info.srcUrl;
-      loadingMessage = 'Saving image to Manent…';
-      action = () => saveImage(srcUrl, tab?.title, pageUrl);
-    } else if (info.menuItemId === MENU_IMAGE_COMMENT && info.srcUrl && tab?.id) {
+    } else if (info.menuItemId === MENU_IMAGE && info.srcUrl && tab?.id) {
       const srcUrl = info.srcUrl;
       const pending: PendingCapture = {
         kind: 'image',
