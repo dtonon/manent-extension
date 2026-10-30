@@ -31,20 +31,6 @@ export function buildNoteTemplate(
   };
 }
 
-export function formatCapture(parts: {
-  comment?: string;
-  selection?: string;
-  title?: string;
-  url?: string;
-}): string {
-  const blocks: string[] = [];
-  if (parts.comment?.trim()) blocks.push(parts.comment.trim());
-  if (parts.selection?.trim()) blocks.push(parts.selection.trim());
-  const source = [parts.title, parts.url].filter(Boolean).join('\n');
-  if (source) blocks.push(source);
-  return blocks.join('\n\n');
-}
-
 // Popup saves, in the same order as the popup preview card
 export function formatPageNote(parts: {
   comment?: string;
@@ -57,4 +43,32 @@ export function formatPageNote(parts: {
   return [parts.comment?.trim(), parts.tags, source, parts.article?.trim()]
     .filter(Boolean)
     .join('\n\n');
+}
+
+// Selection saves: quoted highlight, then comment with tags, then the source
+export function formatSelectionNote(parts: {
+  selection: string;
+  comment?: string;
+  tags?: string;
+  title?: string;
+  url?: string;
+}): string {
+  const quote = parts.selection
+    .trim()
+    .split('\n')
+    .map((line) => (line.trim() ? `> ${line.trimEnd()}` : '>'))
+    .join('\n');
+  return [quote, formatCaption(parts)].filter(Boolean).join('\n\n');
+}
+
+// Comment and tags on consecutive lines, then the source
+export function formatCaption(parts: {
+  comment?: string;
+  tags?: string;
+  title?: string;
+  url?: string;
+}): string {
+  const note = [parts.comment?.trim(), parts.tags].filter(Boolean).join('\n');
+  const source = [parts.title, parts.url].filter(Boolean).join('\n');
+  return [note, source].filter(Boolean).join('\n\n');
 }

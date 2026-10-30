@@ -1,7 +1,9 @@
 import { ICON_PATHS } from './icons';
 
+export type DialogPreview = { srcUrl: string } | { quote: string };
+
 interface DialogOptions {
-  srcUrl: string;
+  preview: DialogPreview;
   icons: { close: string; send: string };
 }
 
@@ -43,6 +45,8 @@ function showCommentDialog(opts: DialogOptions): Promise<string | null> {
       .thumb { width: 36px; height: 36px; border-radius: 4px; object-fit: cover; background: var(--card-dim);
         flex: none; }
       .name { min-width: 0; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .quote { margin: 14px 24px 0; padding: 2px 0 2px 10px; border-left: 3px solid var(--accent);
+        color: var(--text-2); white-space: pre-wrap; overflow-wrap: anywhere; max-height: 7.8em; overflow: auto; }
       .row { display: flex; align-items: flex-end; gap: 8px; padding: 10px 16px 14px 24px; }
       textarea { box-sizing: border-box; flex: 1; min-height: 40px; max-height: 200px; padding: 10px 0; border: 0; border-radius: 4px;
         background: none; color: var(--text); font: inherit; resize: none; }
@@ -82,13 +86,8 @@ function showCommentDialog(opts: DialogOptions): Promise<string | null> {
       return el;
     };
 
-    let filename = 'Image';
-    try {
-      const last = new URL(opts.srcUrl).pathname.split('/').filter(Boolean).pop();
-      if (last) filename = decodeURIComponent(last);
-    } catch {
-      // Data URLs and similar keep the generic name
-    }
+    const isImage = 'srcUrl' in opts.preview;
+    const noun = isImage ? 'image' : 'selection';
 
     const scrim = make('div', 'scrim');
     const dialog = make('div', 'dialog');
@@ -97,7 +96,7 @@ function showCommentDialog(opts: DialogOptions): Promise<string | null> {
     dialog.setAttribute('aria-labelledby', 'manent-dialog-title');
 
     const hd = make('div', 'hd');
-    const title = make('h2', '', 'Save image to Manent');
+    const title = make('h2', '', `Save ${noun} to Manent`);
     title.id = 'manent-dialog-title';
     const close = make('button', 'close') as HTMLButtonElement;
     close.type = 'button';
@@ -105,21 +104,34 @@ function showCommentDialog(opts: DialogOptions): Promise<string | null> {
     close.appendChild(svg(opts.icons.close));
     hd.append(title, close);
 
-    const pending = make('div', 'pending');
-    const thumb = make('img', 'thumb') as HTMLImageElement;
-    thumb.src = opts.srcUrl;
-    thumb.alt = '';
-    pending.append(thumb, make('span', 'name', filename));
+    let pending: HTMLElement;
+    if ('srcUrl' in opts.preview) {
+      let filename = 'Image';
+      try {
+        const last = new URL(opts.preview.srcUrl).pathname.split('/').filter(Boolean).pop();
+        if (last) filename = decodeURIComponent(last);
+      } catch {
+        // Data URLs and similar keep the generic name
+      }
+      pending = make('div', 'pending');
+      const thumb = make('img', 'thumb') as HTMLImageElement;
+      thumb.src = opts.preview.srcUrl;
+      thumb.alt = '';
+      pending.append(thumb, make('span', 'name', filename));
+    } else {
+      pending = make('blockquote', 'quote', opts.preview.quote);
+      pending.setAttribute('aria-label', 'Selected text');
+    }
 
     const row = make('div', 'row');
     const field = make('textarea') as HTMLTextAreaElement;
     field.rows = 1;
-    field.placeholder = 'Add a caption...';
-    field.setAttribute('aria-label', 'Caption');
+    field.placeholder = isImage ? 'Add a caption...' : 'Add a comment...';
+    field.setAttribute('aria-label', isImage ? 'Caption' : 'Comment');
     field.setAttribute('aria-describedby', 'manent-dialog-hint');
     const send = make('button', 'send') as HTMLButtonElement;
     send.type = 'button';
-    send.setAttribute('aria-label', 'Save image');
+    send.setAttribute('aria-label', `Save ${noun}`);
     send.appendChild(svg(opts.icons.send));
     row.append(field, send);
 
@@ -168,13 +180,13 @@ function showCommentDialog(opts: DialogOptions): Promise<string | null> {
   });
 }
 
-export async function askImageComment(tabId: number, srcUrl: string): Promise<string | null> {
+export async function askComment(tabId: number, preview: DialogPreview): Promise<string | null> {
   const { close, send } = ICON_PATHS;
   const [injection] = await browser.scripting
     .executeScript({
       target: { tabId },
       func: showCommentDialog,
-      args: [{ srcUrl, icons: { close, send } }],
+      args: [{ preview, icons: { close, send } }],
     })
     .catch(() => [undefined]);
   return (injection?.result ?? null) as string | null;

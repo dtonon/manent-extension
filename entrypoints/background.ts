@@ -1,11 +1,12 @@
-import { formatCapture } from '@/utils/manent';
-import { saveNote, saveLink, saveImage, savePage } from '@/utils/save';
+import { saveLink, saveImage, savePage, saveSelection } from '@/utils/save';
 import type { SaveOutcome } from '@/utils/save';
 import { retryQueue } from '@/utils/queue';
 import { showPageToast } from '@/utils/toast';
-import { askImageComment } from '@/utils/comment-dialog';
-import { PENDING_IMAGE_KEY } from '@/utils/pending-image';
-import type { PendingImage } from '@/utils/pending-image';
+import { askComment } from '@/utils/comment-dialog';
+import { PENDING_CAPTURE_KEY } from '@/utils/pending-capture';
+import type { PendingCapture } from '@/utils/pending-capture';
+import { getHighlightTagsLine } from '@/utils/tags';
+import { readSelection } from '@/utils/selection';
 import { loginWithNip07 } from '@/utils/nip07';
 import { refreshWriteRelays } from '@/utils/relays';
 import { refreshProfile } from '@/utils/profile';
@@ -53,6 +54,24 @@ async function saveWithToast(
     }
     throw e;
   }
+}
+
+// Opens the popup composer on the capture, or returns false so the caller falls back to the page dialog
+async function openComposer(pending: PendingCapture): Promise<boolean> {
+  // openPopup must run right away, while the menu click still counts as a user action
+  browser.storage.session.set({ [PENDING_CAPTURE_KEY]: pending }).catch(() => {});
+  const popupAction = getAction() as { openPopup?: () => Promise<void> };
+  const opened = popupAction.openPopup
+    ? await popupAction
+        .openPopup()
+        .then(() => true)
+        .catch((e) => {
+          console.warn('Manent: cannot open the popup, using the page dialog', e);
+          return false;
+        })
+    : (console.warn('Manent: action.openPopup is not available, using the page dialog'), false);
+  if (!opened) await browser.storage.session.remove(PENDING_CAPTURE_KEY).catch(() => {});
+  return opened;
 }
 
 export default defineBackground(() => {
@@ -117,6 +136,20 @@ export default defineBackground(() => {
         ),
       );
     }
+    if (message?.type === 'save-selection') {
+      return respond(
+        saveWithToast(message.tabId, () =>
+          saveSelection(
+            message.text,
+            message.title,
+            message.pageUrl,
+            message.comment,
+            message.sensitive,
+            message.tags,
+          ),
+        ),
+      );
+    }
     if (message?.type === 'save-page') {
       return respond(
         saveWithToast(
@@ -143,41 +176,39 @@ export default defineBackground(() => {
     let action: (() => Promise<SaveOutcome>) | null = null;
     let loadingMessage = 'Saving to Manent…';
 
-    if (info.menuItemId === MENU_SELECTION && info.selectionText) {
-      const text = formatCapture({
-        selection: info.selectionText,
-        title: tab?.title,
-        url: pageUrl,
-      });
-      action = () => saveNote(text, false, pageUrl);
+    if (info.menuItemId === MENU_SELECTION && info.selectionText && tab?.id) {
+      const flat = info.selectionText;
+      const pending: PendingCapture = {
+        kind: 'selection',
+        text: flat,
+        frameId: info.frameId,
+        title: tab.title,
+        pageUrl,
+        tabId: tab.id,
+        ts: Date.now(),
+      };
+      if (await openComposer(pending)) return;
+      const text = await readSelection(tab.id, info.frameId, flat);
+      const comment = await askComment(tab.id, { quote: text });
+      if (comment === null) return;
+      const tags = await getHighlightTagsLine();
+      action = () => saveSelection(text, tab?.title, pageUrl, comment, false, tags);
     } else if (info.menuItemId === MENU_IMAGE && info.srcUrl) {
       const srcUrl = info.srcUrl;
       loadingMessage = 'Saving image to Manent…';
       action = () => saveImage(srcUrl, tab?.title, pageUrl);
     } else if (info.menuItemId === MENU_IMAGE_COMMENT && info.srcUrl && tab?.id) {
       const srcUrl = info.srcUrl;
-      const pending: PendingImage = {
+      const pending: PendingCapture = {
+        kind: 'image',
         srcUrl,
         title: tab.title,
         pageUrl,
         tabId: tab.id,
         ts: Date.now(),
       };
-      // openPopup must run right away, while the menu click still counts as a user action
-      browser.storage.session.set({ [PENDING_IMAGE_KEY]: pending }).catch(() => {});
-      const popupAction = getAction() as { openPopup?: () => Promise<void> };
-      const opened = popupAction.openPopup
-        ? await popupAction
-            .openPopup()
-            .then(() => true)
-            .catch((e) => {
-              console.warn('Manent: cannot open the popup, using the page dialog', e);
-              return false;
-            })
-        : (console.warn('Manent: action.openPopup is not available, using the page dialog'), false);
-      if (opened) return;
-      await browser.storage.session.remove(PENDING_IMAGE_KEY).catch(() => {});
-      const comment = await askImageComment(tab.id, srcUrl);
+      if (await openComposer(pending)) return;
+      const comment = await askComment(tab.id, { srcUrl });
       if (comment === null) return;
       loadingMessage = 'Saving image to Manent…';
       action = () => saveImage(srcUrl, tab?.title, pageUrl, comment);

@@ -1,5 +1,6 @@
 const TAGS_KEY = 'tags';
 export const DEFAULT_TAGS = '#readlater';
+export const HIGHLIGHT_TAG = '#highlight';
 
 export function normalizeTags(raw: string): string {
   return raw
@@ -20,4 +21,11 @@ export async function getTagsLine(): Promise<string> {
 
 export async function setTags(raw: string): Promise<void> {
   await browser.storage.local.set({ [TAGS_KEY]: raw });
+}
+
+export async function getHighlightTagsLine(): Promise<string> {
+  return normalizeTags(`${await getRawTags()} ${HIGHLIGHT_TAG}`)
+    .split(' ')
+    .filter((t, i, all) => all.indexOf(t) === i)
+    .join(' ');
 }

@@ -5,10 +5,11 @@ import { getSignerState } from '@/utils/signer';
 import { refreshWriteRelays, getWriteRelays } from '@/utils/relays';
 import { retryQueue, getQueue } from '@/utils/queue';
 import { getBlossomServers } from '@/utils/blossom';
-import { getRawTags, setTags, normalizeTags } from '@/utils/tags';
+import { getRawTags, setTags, normalizeTags, HIGHLIGHT_TAG } from '@/utils/tags';
 import { renderIcons, iconSvg } from '@/utils/icons';
-import { takePendingImage, PENDING_IMAGE_KEY } from '@/utils/pending-image';
-import type { PendingImage } from '@/utils/pending-image';
+import { takePendingCapture, PENDING_CAPTURE_KEY } from '@/utils/pending-capture';
+import type { PendingCapture } from '@/utils/pending-capture';
+import { readSelection } from '@/utils/selection';
 import { getProfile, isProfileStale, PROFILE_KEY } from '@/utils/profile';
 import type { Profile } from '@/utils/profile';
 
@@ -51,7 +52,7 @@ async function render() {
     await renderTags();
     await renderPending();
     renderShortcut().catch(() => {});
-    await checkPendingImage();
+    await checkPendingCapture();
     renderServers(state.account.pubkey);
   }
 }
@@ -277,34 +278,48 @@ function setSensitiveChip(on: boolean) {
   $('sensitive-icon').innerHTML = iconSvg(on ? 'visibilityOff' : 'visibility', 12);
 }
 
-let pendingImage: PendingImage | null = null;
+let pendingCapture: PendingCapture | null = null;
 
-async function checkPendingImage() {
-  const image = await takePendingImage().catch(() => null);
-  if (image) openImageComposer(image);
+async function checkPendingCapture() {
+  const capture = await takePendingCapture().catch(() => null);
+  if (capture) openCaptureComposer(capture);
 }
 
-// The menu click may open the popup before the worker has stored the image
+// The menu click may open the popup before the worker has stored the capture
 browser.storage.onChanged.addListener((changes, area) => {
-  if (area === 'session' && changes[PENDING_IMAGE_KEY]?.newValue && !$('main').hidden) {
-    checkPendingImage();
+  if (area === 'session' && changes[PENDING_CAPTURE_KEY]?.newValue && !$('main').hidden) {
+    checkPendingCapture();
   }
 });
 
-function openImageComposer(image: PendingImage) {
-  pendingImage = image;
+function openCaptureComposer(capture: PendingCapture) {
+  pendingCapture = capture;
   showComposer(true);
-  const img = $('composer-image') as HTMLImageElement;
-  img.src = image.srcUrl;
-  img.hidden = false;
-  $('composer-title').textContent = 'Save image with comment';
+  if (capture.kind === 'image') {
+    const img = $('composer-image') as HTMLImageElement;
+    img.src = capture.srcUrl;
+    img.hidden = false;
+    $('composer-title').textContent = 'Save image with comment';
+  } else {
+    $('composer-quote').textContent = capture.text.trim();
+    $('composer-quote').hidden = false;
+    $('composer-title').textContent = 'Save selection with comment';
+    setComposerTags([...composerTags, HIGHLIGHT_TAG]);
+    readSelection(capture.tabId, capture.frameId, capture.text).then((text) => {
+      if (pendingCapture !== capture) return;
+      capture.text = text;
+      $('composer-quote').textContent = text.trim();
+    });
+  }
   $('full-article').hidden = true;
 }
 
 function showComposer(open: boolean) {
-  if (!open || !pendingImage) {
-    pendingImage = open ? pendingImage : null;
+  if (!open || !pendingCapture) {
+    pendingCapture = open ? pendingCapture : null;
     ($('composer-image') as HTMLImageElement).hidden = true;
+    $('composer-quote').hidden = true;
+    $('composer-quote').textContent = '';
     $('composer-title').textContent = 'Save with comment';
     $('full-article').hidden = false;
   }
@@ -459,13 +474,15 @@ $('composer').addEventListener('submit', (e) => {
     sensitive: $('sensitive').getAttribute('aria-pressed') === 'true',
     tags: [...composerTags, ...pendingTagText()].join(' '),
   };
-  if (pendingImage) {
+  if (pendingCapture) {
+    const { kind, title, pageUrl, tabId } = pendingCapture;
     runSave(button('save-btn'), {
-      type: 'save-image',
-      srcUrl: pendingImage.srcUrl,
-      title: pendingImage.title,
-      pageUrl: pendingImage.pageUrl,
-      tabId: pendingImage.tabId,
+      ...(kind === 'image'
+        ? { type: 'save-image', srcUrl: pendingCapture.srcUrl }
+        : { type: 'save-selection', text: pendingCapture.text }),
+      title,
+      pageUrl,
+      tabId,
       ...common,
     });
     return;

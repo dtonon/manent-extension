@@ -3,6 +3,8 @@ import {
   buildNotePayload,
   buildNoteTemplate,
   formatPageNote,
+  formatCaption,
+  formatSelectionNote,
   FILE_NOTE_KIND,
 } from './manent';
 import { getSignerState } from './signer';
@@ -139,6 +141,28 @@ export async function savePage(
   });
 }
 
+export async function saveSelection(
+  selection: string,
+  title?: string,
+  url?: string,
+  comment = '',
+  sensitive = false,
+  tags?: string,
+): Promise<SaveOutcome> {
+  if (!selection.trim()) throw new Error('Nothing to save');
+  const text = formatSelectionNote({
+    selection: truncateBytes(compactNewlines(selection), MAX_ARTICLE_BYTES),
+    comment,
+    tags: await resolveTags(tags),
+    title,
+    url,
+  });
+  return saveNote(text, sensitive, url, {
+    appendTags: false,
+    snippet: comment.trim() || selection.trim(),
+  });
+}
+
 export async function saveImage(
   srcUrl: string,
   pageTitle?: string,
@@ -171,7 +195,7 @@ export async function saveImage(
     meta.dim = `${bitmap.width}x${bitmap.height}`;
     bitmap.close();
   } catch {}
-  const caption = formatPageNote({
+  const caption = formatCaption({
     comment,
     tags: await resolveTags(tags),
     title: pageTitle,
