@@ -1,4 +1,5 @@
 import { facebookSource } from './social-facebook';
+import { instagramSource } from './social-instagram';
 
 export interface SocialPost {
   site: string;
@@ -24,9 +25,9 @@ export interface SocialSource {
   scanDocument?(doc: Document, id: string): SocialPost | null;
 }
 
-export const SOCIAL_SOURCES: SocialSource[] = [facebookSource];
+export const SOCIAL_SOURCES: SocialSource[] = [facebookSource, instagramSource];
 
-export const SOCIAL_MATCHES = ['*://*.facebook.com/*'];
+export const SOCIAL_MATCHES = ['*://*.facebook.com/*', '*://*.instagram.com/*'];
 
 export function findSource(url: string | undefined): SocialSource | null {
   if (!url) return null;
