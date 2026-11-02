@@ -12,7 +12,7 @@ import type { PendingCapture } from '@/utils/pending-capture';
 import { readSelection } from '@/utils/selection';
 import { getProfile, isProfileStale, PROFILE_KEY } from '@/utils/profile';
 import type { Profile } from '@/utils/profile';
-import { socialBody, socialTitle } from '@/utils/social';
+import { socialBody, socialTags, socialTitle } from '@/utils/social';
 import type { SocialPost } from '@/utils/social';
 import { lookupSocialPost } from '@/utils/social-lookup';
 
@@ -269,7 +269,10 @@ async function loadSocialPost() {
   if (!post || tab !== currentTab) return;
   socialPost = post;
   $('tab-title').textContent = socialTitle(post);
-  if (!$('composer').hidden && !pendingCapture) renderSocialPreview();
+  if (!$('composer').hidden && !pendingCapture) {
+    renderSocialPreview();
+    setComposerTags(socialTags(post).split(' '));
+  }
 }
 
 // Cover and quoted caption of the post the composer will save
@@ -366,7 +369,11 @@ function showComposer(open: boolean) {
   $('save-result').hidden = true;
   if (open) {
     setSensitiveChip(false);
-    setComposerTags(normalizeTags(input('tags').value).split(' ').filter(Boolean));
+    setComposerTags(
+      (socialPost && !pendingCapture ? socialTags(socialPost) : normalizeTags(input('tags').value))
+        .split(' ')
+        .filter(Boolean),
+    );
     input('comment').focus();
   } else {
     input('comment').value = '';

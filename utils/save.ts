@@ -15,7 +15,7 @@ import { enqueue } from './queue';
 import { encryptFile, bytesToBase64 } from './file-crypto';
 import { getBlossomServers, uploadToBlossom } from './blossom';
 import { getTagsLine, normalizeTags } from './tags';
-import { findSource, socialBody, socialTitle } from './social';
+import { findSource, socialBody, socialTags, socialTitle } from './social';
 import type { SocialPost } from './social';
 import { lookupSocialPost } from './social-lookup';
 
@@ -278,7 +278,7 @@ async function saveSocialPost(
   const text = formatSelectionNote({
     selection: truncateBytes(source, MAX_ARTICLE_BYTES),
     comment,
-    tags: await resolveTags(tags),
+    tags: tags === undefined ? socialTags(post) : normalizeTags(tags),
   });
   const snippet = comment.trim() || title;
 

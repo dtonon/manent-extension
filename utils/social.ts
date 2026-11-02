@@ -39,6 +39,11 @@ export function findSource(url: string | undefined): SocialSource | null {
   }
 }
 
+// Default tags of a saved post, in place of the user's default tags
+export function socialTags(post: SocialPost): string {
+  return `#video #${post.site.toLowerCase()}`;
+}
+
 // Title of a saved post: author and the first line of the caption
 export function socialTitle(post: SocialPost): string {
   const who = post.author || post.authorName || post.site;
