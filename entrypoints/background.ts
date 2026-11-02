@@ -109,7 +109,14 @@ export default defineBackground(() => {
     if (message?.type === 'save-link') {
       return respond(
         saveWithToast(message.tabId, () =>
-          saveLink(message.title, message.url, message.comment, message.sensitive, message.tags),
+          saveLink(
+            message.title,
+            message.url,
+            message.comment,
+            message.sensitive,
+            message.tags,
+            message.tabId,
+          ),
         ),
       );
     }

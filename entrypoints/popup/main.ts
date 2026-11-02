@@ -12,6 +12,9 @@ import type { PendingCapture } from '@/utils/pending-capture';
 import { readSelection } from '@/utils/selection';
 import { getProfile, isProfileStale, PROFILE_KEY } from '@/utils/profile';
 import type { Profile } from '@/utils/profile';
+import { socialBody, socialTitle } from '@/utils/social';
+import type { SocialPost } from '@/utils/social';
+import { lookupSocialPost } from '@/utils/social-lookup';
 
 const $ = (id: string) => document.getElementById(id)!;
 const input = (id: string) => $(id) as HTMLInputElement;
@@ -27,6 +30,7 @@ async function askBackground(message: object): Promise<unknown> {
 }
 
 let currentTab: { id?: number; title?: string; url?: string; favIconUrl?: string } = {};
+let socialPost: SocialPost | null = null;
 
 async function render() {
   const state = await getSignerState();
@@ -47,7 +51,9 @@ async function render() {
     $('signer-type').textContent = `Signer: ${SIGNER_LABELS[state.account.signerType]}`;
     const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
     currentTab = { id: tab?.id, title: tab?.title, url: tab?.url, favIconUrl: tab?.favIconUrl };
+    socialPost = null;
     renderPage();
+    loadSocialPost();
     showComposer(false);
     await renderTags();
     await renderPending();
@@ -256,6 +262,32 @@ function renderPage() {
   for (const id of ['save-link', 'save-article', 'open-composer']) button(id).disabled = !canSave;
 }
 
+async function loadSocialPost() {
+  const tab = currentTab;
+  if (!tab.id) return;
+  const post = await lookupSocialPost(tab.id, tab.url);
+  if (!post || tab !== currentTab) return;
+  socialPost = post;
+  $('tab-title').textContent = socialTitle(post);
+  if (!$('composer').hidden && !pendingCapture) renderSocialPreview();
+}
+
+// Cover and quoted caption of the post the composer will save
+function renderSocialPreview() {
+  if (!socialPost) return;
+  const title = socialTitle(socialPost);
+  const img = $('composer-image') as HTMLImageElement;
+  if (socialPost.coverUrl) {
+    img.src = socialPost.coverUrl;
+    img.alt = `Cover: ${title}`;
+    img.hidden = false;
+  }
+  $('composer-quote').textContent = socialBody(socialPost);
+  $('composer-quote').setAttribute('aria-label', 'Post caption');
+  $('composer-quote').hidden = false;
+  $('full-article').hidden = true;
+}
+
 async function renderTags() {
   const raw = await getRawTags();
   $('tags-view').textContent = normalizeTags(raw) || 'none';
@@ -298,10 +330,12 @@ function openCaptureComposer(capture: PendingCapture) {
   if (capture.kind === 'image') {
     const img = $('composer-image') as HTMLImageElement;
     img.src = capture.srcUrl;
+    img.alt = 'Image to save';
     img.hidden = false;
     $('composer-title').textContent = 'Save image with comment';
   } else {
     $('composer-quote').textContent = capture.text.trim();
+    $('composer-quote').setAttribute('aria-label', 'Selected text');
     $('composer-quote').hidden = false;
     $('composer-title').textContent = 'Save selection with comment';
     setComposerTags([...composerTags, HIGHLIGHT_TAG]);
@@ -322,6 +356,7 @@ function showComposer(open: boolean) {
     $('composer-quote').textContent = '';
     $('composer-title').textContent = 'Save with comment';
     $('full-article').hidden = false;
+    if (open) renderSocialPreview();
   }
   $('quick-menu').hidden = open;
   $('composer').hidden = !open;
