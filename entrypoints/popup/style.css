@@ -773,7 +773,7 @@ textarea.input {
   display: block;
   width: 100%;
   height: auto;
-  max-height: 240px;
+  max-height: 180px;
   margin-bottom: 8px;
   border-radius: 8px;
   background: var(--card-dim);
@@ -781,7 +781,7 @@ textarea.input {
 }
 
 .composer-quote {
-  max-height: 7.8em;
+  max-height: 5.2em;
   margin: 0 0 4px;
   padding: 2px 0 2px 10px;
   overflow: auto;

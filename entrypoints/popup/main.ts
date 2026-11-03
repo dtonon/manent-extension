@@ -362,6 +362,7 @@ function showComposer(open: boolean) {
     if (open) renderSocialPreview();
   }
   $('quick-menu').hidden = open;
+  $('page-row').hidden = open;
   $('composer').hidden = !open;
   $('tags-line').hidden = open;
   $('shortcut-line').hidden = open;
