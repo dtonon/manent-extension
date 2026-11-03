@@ -15,7 +15,7 @@ import { enqueue } from './queue';
 import { encryptFile, bytesToBase64 } from './file-crypto';
 import { getBlossomServers, uploadToBlossom } from './blossom';
 import { getTagsLine, normalizeTags } from './tags';
-import { findSource, socialBody, socialTags, socialTitle } from './social';
+import { findSource, socialQuote, socialTags, socialTitle } from './social';
 import type { SocialPost } from './social';
 import { lookupSocialPost } from './social-lookup';
 
@@ -274,9 +274,8 @@ async function saveSocialPost(
   const state = await readySigner();
   const title = socialTitle(post);
   // Everything from the source is quoted, the user's comment and tags follow
-  const source = `${title}\n${post.url}\n\n${socialBody(post)}`;
   const text = formatSelectionNote({
-    selection: truncateBytes(source, MAX_ARTICLE_BYTES),
+    selection: truncateBytes(socialQuote(post), MAX_ARTICLE_BYTES),
     comment,
     tags: tags === undefined ? socialTags(post) : normalizeTags(tags),
   });

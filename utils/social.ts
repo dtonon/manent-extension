@@ -53,13 +53,9 @@ export function socialTitle(post: SocialPost): string {
   return `${who}: ${short}`;
 }
 
-// Caption, then author and date
-export function socialBody(post: SocialPost): string {
-  const who =
-    post.author && post.authorName && post.author !== post.authorName
-      ? `${post.authorName} (@${post.author})`
-      : post.authorName || post.author;
+// Source text of a saved post: title, link, caption and date; the popup preview leaves out the link
+export function socialQuote(post: SocialPost, withUrl = true): string {
+  const head = withUrl ? `${socialTitle(post)}\n${post.url}` : socialTitle(post);
   const date = post.date ? new Date(post.date * 1000).toISOString().slice(0, 10) : '';
-  const byline = [who, date, post.site].filter(Boolean).join(' · ');
-  return [post.caption?.trim(), byline && `— ${byline}`].filter(Boolean).join('\n\n');
+  return [head, post.caption?.trim(), date].filter(Boolean).join('\n\n');
 }

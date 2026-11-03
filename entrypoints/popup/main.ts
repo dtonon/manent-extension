@@ -12,7 +12,7 @@ import type { PendingCapture } from '@/utils/pending-capture';
 import { readSelection } from '@/utils/selection';
 import { getProfile, isProfileStale, PROFILE_KEY } from '@/utils/profile';
 import type { Profile } from '@/utils/profile';
-import { socialBody, socialTags, socialTitle } from '@/utils/social';
+import { socialQuote, socialTags, socialTitle } from '@/utils/social';
 import type { SocialPost } from '@/utils/social';
 import { lookupSocialPost } from '@/utils/social-lookup';
 
@@ -285,7 +285,7 @@ function renderSocialPreview() {
     img.alt = `Cover: ${title}`;
     img.hidden = false;
   }
-  $('composer-quote').textContent = socialBody(socialPost);
+  $('composer-quote').textContent = socialQuote(socialPost, false);
   $('composer-quote').setAttribute('aria-label', 'Post caption');
   $('composer-quote').hidden = false;
   $('full-article').hidden = true;
