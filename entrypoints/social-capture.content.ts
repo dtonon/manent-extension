@@ -82,7 +82,11 @@ export default defineContentScript({
           if (!id) return null;
           const post = posts.get(id) ?? source.scanDocument?.(document, id) ?? null;
           if (!post) return null;
-          return { ...post, coverUrl: post.coverUrl ?? visiblePoster() };
+          return {
+            ...post,
+            url: source.canonicalUrl(id, new URL(href)),
+            coverUrl: post.coverUrl ?? visiblePoster(),
+          };
         },
       },
     });

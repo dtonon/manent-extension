@@ -281,12 +281,13 @@ async function saveSocialPost(
   });
   const snippet = comment.trim() || title;
 
-  if (post.coverUrl) {
+  for (const cover of [post.coverUrl, post.coverFallbackUrl]) {
+    if (!cover) continue;
     let meta: Record<string, unknown> | null = null;
     try {
-      meta = await buildImageMeta(state, post.coverUrl, text, sensitive);
+      meta = await buildImageMeta(state, cover, text, sensitive);
     } catch (e) {
-      console.warn('Manent: cannot store the cover, saving text only', e);
+      console.warn('Manent: cannot store the cover', cover, e);
     }
     if (meta) return publishImageMeta(state, meta, snippet, post.url);
   }

@@ -281,6 +281,11 @@ function renderSocialPreview() {
   const title = socialTitle(socialPost);
   const img = $('composer-image') as HTMLImageElement;
   if (socialPost.coverUrl) {
+    const fallback = socialPost.coverFallbackUrl;
+    img.onerror = () => {
+      if (fallback && img.src !== fallback) img.src = fallback;
+      else img.hidden = true;
+    };
     img.src = socialPost.coverUrl;
     img.alt = `Cover: ${title}`;
     img.hidden = false;
@@ -332,6 +337,7 @@ function openCaptureComposer(capture: PendingCapture) {
   showComposer(true);
   if (capture.kind === 'image') {
     const img = $('composer-image') as HTMLImageElement;
+    img.onerror = null;
     img.src = capture.srcUrl;
     img.alt = 'Image to save';
     img.hidden = false;

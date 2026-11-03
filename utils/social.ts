@@ -1,5 +1,6 @@
 import { facebookSource } from './social-facebook';
 import { instagramSource } from './social-instagram';
+import { youtubeSource } from './social-youtube';
 
 export interface SocialPost {
   site: string;
@@ -7,9 +8,13 @@ export interface SocialPost {
   url: string;
   author?: string;
   authorName?: string;
+  // Own title of the post, when the site has one
+  title?: string;
   date?: number;
   caption?: string;
   coverUrl?: string;
+  // Tried when coverUrl cannot be fetched
+  coverFallbackUrl?: string;
 }
 
 export interface SocialSource {
@@ -18,16 +23,21 @@ export interface SocialSource {
   // Request URLs whose responses carry post data
   network: RegExp;
   postId(url: URL): string | null;
-  canonicalUrl(id: string): string;
+  // The page URL tells apart forms of the same id, as YouTube videos and Shorts
+  canonicalUrl(id: string, page?: URL): string;
   // Posts found in a network response, keyed by the ids they can be looked up with
   scanResponse(text: string): Map<string, SocialPost>;
   // Post embedded in the page on a direct load
   scanDocument?(doc: Document, id: string): SocialPost | null;
 }
 
-export const SOCIAL_SOURCES: SocialSource[] = [facebookSource, instagramSource];
+export const SOCIAL_SOURCES: SocialSource[] = [facebookSource, instagramSource, youtubeSource];
 
-export const SOCIAL_MATCHES = ['*://*.facebook.com/*', '*://*.instagram.com/*'];
+export const SOCIAL_MATCHES = [
+  '*://*.facebook.com/*',
+  '*://*.instagram.com/*',
+  '*://*.youtube.com/*',
+];
 
 export function findSource(url: string | undefined): SocialSource | null {
   if (!url) return null;
@@ -44,10 +54,10 @@ export function socialTags(post: SocialPost): string {
   return `#video #${post.site.toLowerCase()}`;
 }
 
-// Title of a saved post: author and the first line of the caption
+// Title of a saved post: author and the post's own title, or the first line of the caption
 export function socialTitle(post: SocialPost): string {
   const who = post.author || post.authorName || post.site;
-  const first = post.caption?.trim().split('\n')[0]?.trim() ?? '';
+  const first = (post.title ?? post.caption)?.trim().split('\n')[0]?.trim() ?? '';
   if (!first) return who;
   const short = first.length > 80 ? `${first.slice(0, 79).trimEnd()}…` : first;
   return `${who}: ${short}`;
