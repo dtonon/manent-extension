@@ -3,10 +3,8 @@ import { walkJson } from './social-json';
 
 const SITE = 'YouTube';
 
-function canonicalUrl(id: string, page?: URL): string {
-  return page?.pathname.startsWith('/shorts/')
-    ? `https://www.youtube.com/shorts/${id}`
-    : `https://www.youtube.com/watch?v=${id}`;
+function canonicalUrl(id: string): string {
+  return `https://www.youtube.com/watch?v=${id}`;
 }
 
 // Largest thumbnail the video actually has, without the resizing parameters
@@ -36,7 +34,7 @@ function toPost(player: any): SocialPost | null {
     date: Number.isNaN(published) ? undefined : Math.floor(published / 1000),
     caption: details.shortDescription || undefined,
     coverUrl: pickCover(details) ?? `https://i.ytimg.com/vi/${id}/hqdefault.jpg`,
-    coverFallbackUrl: `https://i.ytimg.com/vi/${id}/hqdefault.jpg`,
+    coverFallbacks: [`https://i.ytimg.com/vi/${id}/hqdefault.jpg`],
   };
 }
 
@@ -50,7 +48,21 @@ export const youtubeSource: SocialSource = {
     return url.pathname.match(/^\/shorts\/([\w-]+)/)?.[1] ?? null;
   },
 
-  canonicalUrl,
+  // Shorts keep their link; oardefault is the vertical thumbnail, missing on some Shorts where oar2,
+  // a vertical frame, still exists; the listed thumbnails put the frame on a blurred 16:9 background
+  forPage(post, page) {
+    if (!page.pathname.startsWith('/shorts/')) return post;
+    return {
+      ...post,
+      url: `https://www.youtube.com/shorts/${post.id}`,
+      coverUrl: `https://i.ytimg.com/vi/${post.id}/oardefault.jpg`,
+      coverFallbacks: [
+        `https://i.ytimg.com/vi/${post.id}/oar2.jpg`,
+        ...(post.coverUrl ? [post.coverUrl] : []),
+        ...(post.coverFallbacks ?? []),
+      ],
+    };
+  },
 
   scanResponse(text) {
     const found = new Map<string, SocialPost>();

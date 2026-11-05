@@ -70,7 +70,6 @@ export const instagramSource: SocialSource = {
     return url.pathname.match(/^\/reels?\/([\w-]+)/)?.[1] ?? null;
   },
 
-  canonicalUrl,
 
   scanResponse(text) {
     const found = new Map<string, SocialPost>();

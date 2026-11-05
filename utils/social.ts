@@ -13,8 +13,8 @@ export interface SocialPost {
   date?: number;
   caption?: string;
   coverUrl?: string;
-  // Tried when coverUrl cannot be fetched
-  coverFallbackUrl?: string;
+  // Tried in order when coverUrl cannot be fetched
+  coverFallbacks?: string[];
 }
 
 export interface SocialSource {
@@ -23,8 +23,8 @@ export interface SocialSource {
   // Request URLs whose responses carry post data
   network: RegExp;
   postId(url: URL): string | null;
-  // The page URL tells apart forms of the same id, as YouTube videos and Shorts
-  canonicalUrl(id: string, page?: URL): string;
+  // Adjusts a post to the page it is saved from, as YouTube Shorts and videos sharing ids
+  forPage?(post: SocialPost, page: URL): SocialPost;
   // Posts found in a network response, keyed by the ids they can be looked up with
   scanResponse(text: string): Map<string, SocialPost>;
   // Post embedded in the page on a direct load

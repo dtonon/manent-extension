@@ -32,7 +32,6 @@ export const facebookSource: SocialSource = {
     return url.pathname.match(/^\/reel\/(\d+)/)?.[1] ?? null;
   },
 
-  canonicalUrl,
 
   scanResponse(text) {
     const found = new Map<string, SocialPost>();

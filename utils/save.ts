@@ -281,7 +281,7 @@ async function saveSocialPost(
   });
   const snippet = comment.trim() || title;
 
-  for (const cover of [post.coverUrl, post.coverFallbackUrl]) {
+  for (const cover of [post.coverUrl, ...(post.coverFallbacks ?? [])]) {
     if (!cover) continue;
     let meta: Record<string, unknown> | null = null;
     try {

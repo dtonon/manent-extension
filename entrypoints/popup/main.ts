@@ -281,10 +281,16 @@ function renderSocialPreview() {
   const title = socialTitle(socialPost);
   const img = $('composer-image') as HTMLImageElement;
   if (socialPost.coverUrl) {
-    const fallback = socialPost.coverFallbackUrl;
-    img.onerror = () => {
-      if (fallback && img.src !== fallback) img.src = fallback;
+    const queue = [...(socialPost.coverFallbacks ?? [])];
+    const next = () => {
+      const url = queue.shift();
+      if (url) img.src = url;
       else img.hidden = true;
+    };
+    img.onerror = next;
+    // YouTube answers a missing thumbnail with a 120 px placeholder instead of an error
+    img.onload = () => {
+      if (img.naturalWidth <= 120) next();
     };
     img.src = socialPost.coverUrl;
     img.alt = `Cover: ${title}`;
@@ -338,6 +344,7 @@ function openCaptureComposer(capture: PendingCapture) {
   if (capture.kind === 'image') {
     const img = $('composer-image') as HTMLImageElement;
     img.onerror = null;
+    img.onload = null;
     img.src = capture.srcUrl;
     img.alt = 'Image to save';
     img.hidden = false;
