@@ -4,6 +4,7 @@ import { youtubeSource } from './social-youtube';
 
 export interface SocialPost {
   site: string;
+  kind: 'video' | 'image';
   id: string;
   url: string;
   author?: string;
@@ -51,7 +52,8 @@ export function findSource(url: string | undefined): SocialSource | null {
 
 // Default tags of a saved post, in place of the user's default tags
 export function socialTags(post: SocialPost): string {
-  return `#video #${post.site.toLowerCase()}`;
+  const site = `#${post.site.toLowerCase()}`;
+  return post.kind === 'video' ? `#video ${site}` : site;
 }
 
 // Title of a saved post: author and the post's own title, or the first line of the caption

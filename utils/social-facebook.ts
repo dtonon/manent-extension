@@ -15,6 +15,7 @@ function isPost(o: any): boolean {
 function toPost(o: any, id: string): SocialPost {
   return {
     site: SITE,
+    kind: 'video',
     id,
     url: canonicalUrl(id),
     authorName: o.actors?.[0]?.name,

@@ -27,6 +27,7 @@ function toPost(player: any): SocialPost | null {
   const id = details.videoId;
   return {
     site: SITE,
+    kind: 'video',
     id,
     url: canonicalUrl(id),
     author: details.author || undefined,
