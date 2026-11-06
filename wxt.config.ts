@@ -11,6 +11,10 @@ export default defineConfig({
         suggested_key: { default: 'Alt+Shift+M' },
         description: 'Open Manent',
       },
+      'save-link': {
+        suggested_key: { default: 'Alt+Shift+S' },
+        description: 'Save the page link to Manent',
+      },
     },
     ...(browser === 'firefox' && {
       browser_specific_settings: {

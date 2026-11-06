@@ -172,6 +172,14 @@ export default defineBackground(() => {
     }
   });
 
+  browser.commands.onCommand.addListener(async (command, tab) => {
+    if (command !== 'save-link') return;
+    const target = tab?.id ? tab : (await browser.tabs.query({ active: true, currentWindow: true }))[0];
+    if (!target?.id || !target.url) return;
+    const { id, title, url } = target;
+    await saveWithToast(id, () => saveLink(title, url, '', false, undefined, id)).catch(() => {});
+  });
+
   browser.contextMenus.onClicked.addListener(async (info, tab) => {
     const pageUrl = info.pageUrl ?? tab?.url;
     let action: (() => Promise<SaveOutcome>) | null = null;
