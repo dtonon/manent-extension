@@ -14,10 +14,11 @@ import { publishEvent } from './publish';
 import { enqueue } from './queue';
 import { encryptFile, bytesToBase64 } from './file-crypto';
 import { getBlossomServers, uploadToBlossom } from './blossom';
-import { getTagsLine, normalizeTags } from './tags';
+import { getScreenshotTagsLine, getTagsLine, normalizeTags } from './tags';
 import { findSource, socialQuote, socialTags, socialTitle } from './social';
 import type { SocialPost } from './social';
 import { lookupSocialPost } from './social-lookup';
+import { captureTab, screenshotFilename } from './screenshot';
 
 export type SaveOutcome = 'published' | 'queued';
 
@@ -115,6 +116,7 @@ export async function savePage(
   comment: string,
   sensitive = false,
   tags?: string,
+  onScreenshot?: () => void,
 ): Promise<SaveOutcome> {
   await readySigner();
 
@@ -137,7 +139,9 @@ export async function savePage(
   if (!article) {
     // Supported sites have no article, a plain link is better than an error
     if (tab.url && findSource(tab.url)) return saveLink(tab.title, tab.url, comment, sensitive, tags);
-    throw new Error('No readable article found on this page');
+    const dataUrl = await captureTab(tabId);
+    onScreenshot?.();
+    return saveScreenshot(dataUrl, tab.title, tab.url, comment, sensitive, tags);
   }
 
   const title = article.title || tab.title;
@@ -185,16 +189,20 @@ function byteLength(text: string): number {
   return new TextEncoder().encode(text).length;
 }
 
-// Downloads, encrypts and stores the image, returns the metadata of the image note
+async function fetchImage(srcUrl: string): Promise<Blob> {
+  const res = await fetch(srcUrl);
+  if (!res.ok) throw new Error('Cannot fetch the image');
+  return res.blob();
+}
+
+// Encrypts and stores the image, returns the metadata of the image note
 async function buildImageMeta(
   state: ReadySigner,
-  srcUrl: string,
+  blob: Blob,
+  filename: string | ((mime: string) => string),
   caption: string,
   sensitive: boolean,
 ): Promise<Record<string, unknown>> {
-  const res = await fetch(srcUrl);
-  if (!res.ok) throw new Error('Cannot fetch the image');
-  const blob = await res.blob();
   const data = new Uint8Array(await blob.arrayBuffer());
   if (data.length === 0) throw new Error('Empty image');
   const mime = blob.type || 'application/octet-stream';
@@ -202,7 +210,7 @@ async function buildImageMeta(
   const encrypted = await encryptFile(data);
 
   const meta: Record<string, unknown> = {
-    filename: filenameFromUrl(srcUrl, mime),
+    filename: typeof filename === 'string' ? filename : filename(mime),
     'file-type': mime,
     'encryption-algorithm': 'aes-gcm',
     size: data.length,
@@ -236,7 +244,7 @@ async function publishImageMeta(
   state: ReadySigner,
   meta: Record<string, unknown>,
   snippet: string,
-  sourceUrl: string,
+  sourceUrl?: string,
 ): Promise<SaveOutcome> {
   const ciphertext = await state.signer.nip44Encrypt(state.account.pubkey, JSON.stringify(meta));
   const event = await state.signer.signEvent(
@@ -260,8 +268,35 @@ export async function saveImage(
     title: pageTitle,
     url: pageUrl,
   });
-  const meta = await buildImageMeta(state, srcUrl, caption, sensitive);
+  const meta = await buildImageMeta(
+    state,
+    await fetchImage(srcUrl),
+    (mime) => filenameFromUrl(srcUrl, mime),
+    caption,
+    sensitive,
+  );
   return publishImageMeta(state, meta, `Image: ${meta.filename}`, pageUrl ?? srcUrl);
+}
+
+export async function saveScreenshot(
+  dataUrl: string,
+  pageTitle?: string,
+  pageUrl?: string,
+  comment?: string,
+  sensitive = false,
+  tags?: string,
+): Promise<SaveOutcome> {
+  const state = await readySigner();
+  const caption = formatCaption({
+    comment,
+    tags: tags === undefined ? await getScreenshotTagsLine() : normalizeTags(tags),
+    title: pageTitle,
+    url: pageUrl,
+  });
+  const blob = await (await fetch(dataUrl)).blob();
+  const meta = await buildImageMeta(state, blob, screenshotFilename(pageUrl), caption, sensitive);
+  const snippet = comment?.trim() || `Screenshot: ${pageTitle || pageUrl || meta.filename}`;
+  return publishImageMeta(state, meta, snippet, pageUrl);
 }
 
 // One image note with the cover, or a text note with the same content when the cover cannot be stored
@@ -285,7 +320,13 @@ async function saveSocialPost(
     if (!cover) continue;
     let meta: Record<string, unknown> | null = null;
     try {
-      meta = await buildImageMeta(state, cover, text, sensitive);
+      meta = await buildImageMeta(
+        state,
+        await fetchImage(cover),
+        (mime) => filenameFromUrl(cover, mime),
+        text,
+        sensitive,
+      );
     } catch (e) {
       console.warn('Manent: cannot store the cover', cover, e);
     }

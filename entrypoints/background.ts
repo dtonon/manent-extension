@@ -1,4 +1,4 @@
-import { saveLink, saveImage, savePage, saveSelection } from '@/utils/save';
+import { saveLink, saveImage, savePage, saveScreenshot, saveSelection } from '@/utils/save';
 import type { SaveOutcome } from '@/utils/save';
 import { retryQueue } from '@/utils/queue';
 import { showPageToast } from '@/utils/toast';
@@ -10,10 +10,14 @@ import { readSelection } from '@/utils/selection';
 import { loginWithNip07 } from '@/utils/nip07';
 import { refreshWriteRelays } from '@/utils/relays';
 import { refreshProfile } from '@/utils/profile';
+import { askArea } from '@/utils/screenshot-overlay';
+import { captureTab } from '@/utils/screenshot';
 
 const MENU_SELECTION = 'save-selection';
 const MENU_IMAGE = 'save-image';
 const MENU_PAGE = 'save-page';
+const MENU_SCREENSHOT = 'save-screenshot';
+const SCREENSHOT_FALLBACK = 'No readable article, saved a screenshot';
 
 function getAction() {
   return browser.action ?? (browser as any).browserAction;
@@ -31,26 +35,32 @@ function flashBadge(text: string) {
   setTimeout(() => action.setBadgeText({ text: '' }), 3000);
 }
 
+async function showError(tabId: number | undefined, e: unknown) {
+  flashBadge('!');
+  if (tabId) {
+    await showPageToast(tabId, 'error', 'Not saved', e instanceof Error ? e.message : 'Save failed');
+  }
+}
+
+// The run can replace the toast detail, the page title by default
 async function saveWithToast(
   tabId: number | undefined,
-  run: () => Promise<SaveOutcome>,
+  run: (setDetail: (detail: string) => void) => Promise<SaveOutcome>,
   loadingMessage = 'Saving to Manent…',
 ): Promise<SaveOutcome> {
   const title = tabId ? (await browser.tabs.get(tabId).catch(() => undefined))?.title : undefined;
+  let detail = title;
   if (tabId) await showPageToast(tabId, 'loading', loadingMessage, title);
   try {
-    const outcome = await run();
+    const outcome = await run((d) => (detail = d));
     flashBadge(outcome === 'published' ? '✓' : '…');
     if (tabId) {
-      if (outcome === 'published') await showPageToast(tabId, 'published', 'Saved to Manent', title);
-      else await showPageToast(tabId, 'queued', 'Queued, will retry later', title);
+      if (outcome === 'published') await showPageToast(tabId, 'published', 'Saved to Manent', detail);
+      else await showPageToast(tabId, 'queued', 'Queued, will retry later', detail);
     }
     return outcome;
   } catch (e) {
-    flashBadge('!');
-    if (tabId) {
-      await showPageToast(tabId, 'error', 'Not saved', e instanceof Error ? e.message : 'Save failed');
-    }
+    await showError(tabId, e);
     throw e;
   }
 }
@@ -73,6 +83,38 @@ async function openComposer(pending: PendingCapture): Promise<boolean> {
   return opened;
 }
 
+// Area selection on the page, then the composer, or the page dialog when the popup cannot open
+async function startScreenshot(tabId: number): Promise<void> {
+  let dataUrl: string;
+  try {
+    const area = await askArea(tabId).catch(() => {
+      throw new Error('This page cannot be captured');
+    });
+    if (!area) return;
+    dataUrl = await captureTab(tabId, area);
+  } catch (e) {
+    await showError(tabId, e);
+    return;
+  }
+  const tab = await browser.tabs.get(tabId).catch(() => undefined);
+  const pending: PendingCapture = {
+    kind: 'screenshot',
+    dataUrl,
+    title: tab?.title,
+    pageUrl: tab?.url,
+    tabId,
+    ts: Date.now(),
+  };
+  if (await openComposer(pending)) return;
+  const comment = await askComment(tabId, { srcUrl: dataUrl, screenshot: true });
+  if (comment === null) return;
+  await saveWithToast(
+    tabId,
+    () => saveScreenshot(dataUrl, tab?.title, tab?.url, comment),
+    'Saving screenshot to Manent…',
+  ).catch(() => {});
+}
+
 export default defineBackground(() => {
   const setupMenu = () => {
     browser.contextMenus.removeAll().then(() => {
@@ -89,6 +131,11 @@ export default defineBackground(() => {
       browser.contextMenus.create({
         id: MENU_PAGE,
         title: 'Save full article to Manent',
+        contexts: ['page'],
+      });
+      browser.contextMenus.create({
+        id: MENU_SCREENSHOT,
+        title: 'Save screenshot to Manent',
         contexts: ['page'],
       });
     });
@@ -155,10 +202,34 @@ export default defineBackground(() => {
       return respond(
         saveWithToast(
           message.tabId,
-          () => savePage(message.tabId, message.comment, message.sensitive, message.tags),
+          (setDetail) =>
+            savePage(message.tabId, message.comment, message.sensitive, message.tags, () =>
+              setDetail(SCREENSHOT_FALLBACK),
+            ),
           'Saving article to Manent…',
         ),
       );
+    }
+    if (message?.type === 'save-screenshot') {
+      return respond(
+        saveWithToast(
+          message.tabId,
+          () =>
+            saveScreenshot(
+              message.dataUrl,
+              message.title,
+              message.pageUrl,
+              message.comment,
+              message.sensitive,
+              message.tags,
+            ),
+          'Saving screenshot to Manent…',
+        ),
+      );
+    }
+    if (message?.type === 'start-screenshot') {
+      startScreenshot(message.tabId);
+      return;
     }
     if (message?.type === 'login-nip07') {
       return respond(
@@ -182,7 +253,7 @@ export default defineBackground(() => {
 
   browser.contextMenus.onClicked.addListener(async (info, tab) => {
     const pageUrl = info.pageUrl ?? tab?.url;
-    let action: (() => Promise<SaveOutcome>) | null = null;
+    let action: ((setDetail: (detail: string) => void) => Promise<SaveOutcome>) | null = null;
     let loadingMessage = 'Saving to Manent…';
 
     if (info.menuItemId === MENU_SELECTION && info.selectionText && tab?.id) {
@@ -220,7 +291,11 @@ export default defineBackground(() => {
     } else if (info.menuItemId === MENU_PAGE && tab?.id) {
       const tabId = tab.id;
       loadingMessage = 'Saving article to Manent…';
-      action = () => savePage(tabId, '');
+      action = (setDetail) =>
+        savePage(tabId, '', false, undefined, () => setDetail(SCREENSHOT_FALLBACK));
+    } else if (info.menuItemId === MENU_SCREENSHOT && tab?.id) {
+      await startScreenshot(tab.id);
+      return;
     }
     if (!action) return;
     await saveWithToast(tab?.id, action, loadingMessage).catch(() => {});

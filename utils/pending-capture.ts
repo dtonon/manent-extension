@@ -11,6 +11,7 @@ interface PendingBase {
 
 export type PendingCapture =
   | (PendingBase & { kind: 'image'; srcUrl: string })
+  | (PendingBase & { kind: 'screenshot'; dataUrl: string })
   | (PendingBase & { kind: 'selection'; text: string; frameId?: number });
 
 export async function takePendingCapture(): Promise<PendingCapture | null> {

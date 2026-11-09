@@ -5,7 +5,7 @@ import { getSignerState } from '@/utils/signer';
 import { refreshWriteRelays, getWriteRelays } from '@/utils/relays';
 import { retryQueue, getQueue } from '@/utils/queue';
 import { getBlossomServers } from '@/utils/blossom';
-import { getRawTags, setTags, normalizeTags, HIGHLIGHT_TAG } from '@/utils/tags';
+import { getRawTags, setTags, normalizeTags, screenshotTags, HIGHLIGHT_TAG } from '@/utils/tags';
 import { renderIcons, iconSvg } from '@/utils/icons';
 import { takePendingCapture, PENDING_CAPTURE_KEY } from '@/utils/pending-capture';
 import type { PendingCapture } from '@/utils/pending-capture';
@@ -260,6 +260,8 @@ function renderPage() {
   }
   const canSave = Boolean(url && currentTab.id);
   for (const id of ['save-link', 'save-article', 'open-composer']) button(id).disabled = !canSave;
+  // The area selection runs on the page, browser pages cannot host it
+  button('save-screenshot').disabled = !canSave || !pageShowsToast();
 }
 
 async function loadSocialPost() {
@@ -341,14 +343,18 @@ browser.storage.onChanged.addListener((changes, area) => {
 function openCaptureComposer(capture: PendingCapture) {
   pendingCapture = capture;
   showComposer(true);
-  if (capture.kind === 'image') {
+  if (capture.kind === 'image' || capture.kind === 'screenshot') {
+    const isImage = capture.kind === 'image';
     const img = $('composer-image') as HTMLImageElement;
     img.onerror = null;
     img.onload = null;
-    img.src = capture.srcUrl;
-    img.alt = 'Image to save';
+    img.src = isImage ? capture.srcUrl : capture.dataUrl;
+    img.alt = isImage ? 'Image to save' : 'Screenshot to save';
     img.hidden = false;
-    $('composer-title').textContent = 'Save image with comment';
+    $('composer-title').textContent = isImage
+      ? 'Save image with comment'
+      : 'Save screenshot with comment';
+    if (!isImage) setComposerTags(screenshotTags(composerTags));
   } else {
     $('composer-quote').textContent = capture.text.trim();
     $('composer-quote').setAttribute('aria-label', 'Selected text');
@@ -503,7 +509,15 @@ function saveArticle() {
   });
 }
 
+// The popup must close so the area can be dragged on the page
+function startScreenshot() {
+  if (button('save-screenshot').disabled || !currentTab.id) return;
+  browser.runtime.sendMessage({ type: 'start-screenshot', tabId: currentTab.id }).catch(() => {});
+  setTimeout(() => window.close(), 150);
+}
+
 $('save-link').addEventListener('click', saveLink);
+$('save-screenshot').addEventListener('click', startScreenshot);
 $('save-article').addEventListener('click', saveArticle);
 $('open-composer').addEventListener('click', () => showComposer(true));
 $('composer-close').addEventListener('click', () => showComposer(false));
@@ -531,11 +545,13 @@ $('composer').addEventListener('submit', (e) => {
     tags: [...composerTags, ...pendingTagText()].join(' '),
   };
   if (pendingCapture) {
-    const { kind, title, pageUrl, tabId } = pendingCapture;
+    const { title, pageUrl, tabId } = pendingCapture;
     runSave(button('save-btn'), {
-      ...(kind === 'image'
+      ...(pendingCapture.kind === 'image'
         ? { type: 'save-image', srcUrl: pendingCapture.srcUrl }
-        : { type: 'save-selection', text: pendingCapture.text }),
+        : pendingCapture.kind === 'screenshot'
+          ? { type: 'save-screenshot', dataUrl: pendingCapture.dataUrl }
+          : { type: 'save-selection', text: pendingCapture.text }),
       title,
       pageUrl,
       tabId,
@@ -614,7 +630,7 @@ $('quick-menu').addEventListener('mousemove', () => {
   if (active?.classList.contains('quick-item')) active.blur();
 });
 
-// Menu keys: arrows move, 1-3 run the actions, Esc leaves the composer
+// Menu keys: arrows move, 1-4 run the actions, Esc leaves the composer
 document.addEventListener('keydown', (e) => {
   if ($('main').hidden || !$('account-menu').hidden) return;
   const typing = e.target instanceof HTMLElement && e.target.matches('input, textarea');
@@ -633,6 +649,7 @@ document.addEventListener('keydown', (e) => {
   } else if (e.key === '1') saveLink();
   else if (e.key === '2') saveArticle();
   else if (e.key === '3' && !button('open-composer').disabled) showComposer(true);
+  else if (e.key === '4') startScreenshot();
 });
 
 $('logout-btn').addEventListener('click', async () => {

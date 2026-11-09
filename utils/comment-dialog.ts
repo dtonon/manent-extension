@@ -1,6 +1,6 @@
 import { ICON_PATHS } from './icons';
 
-export type DialogPreview = { srcUrl: string } | { quote: string };
+export type DialogPreview = { srcUrl: string; screenshot?: boolean } | { quote: string };
 
 interface DialogOptions {
   preview: DialogPreview;
@@ -87,7 +87,8 @@ function showCommentDialog(opts: DialogOptions): Promise<string | null> {
     };
 
     const isImage = 'srcUrl' in opts.preview;
-    const noun = isImage ? 'image' : 'selection';
+    const isScreenshot = 'srcUrl' in opts.preview && Boolean(opts.preview.screenshot);
+    const noun = isScreenshot ? 'screenshot' : isImage ? 'image' : 'selection';
 
     const scrim = make('div', 'scrim');
     const dialog = make('div', 'dialog');
@@ -106,17 +107,21 @@ function showCommentDialog(opts: DialogOptions): Promise<string | null> {
 
     let pending: HTMLElement;
     if ('srcUrl' in opts.preview) {
-      let filename = 'Image';
-      try {
-        const last = new URL(opts.preview.srcUrl).pathname.split('/').filter(Boolean).pop();
-        if (last) filename = decodeURIComponent(last);
-      } catch {
-        // Data URLs and similar keep the generic name
+      let filename = isScreenshot ? 'Screenshot' : 'Image';
+      if (!isScreenshot) {
+        try {
+          const last = new URL(opts.preview.srcUrl).pathname.split('/').filter(Boolean).pop();
+          if (last) filename = decodeURIComponent(last);
+        } catch {
+          // Data URLs and similar keep the generic name
+        }
       }
       pending = make('div', 'pending');
       const thumb = make('img', 'thumb') as HTMLImageElement;
       thumb.src = opts.preview.srcUrl;
       thumb.alt = '';
+      // The page CSP may block data URLs
+      thumb.addEventListener('error', () => (thumb.style.visibility = 'hidden'));
       pending.append(thumb, make('span', 'name', filename));
     } else {
       pending = make('blockquote', 'quote', opts.preview.quote);
