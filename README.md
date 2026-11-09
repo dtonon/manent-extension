@@ -63,3 +63,7 @@ To load a local build, pick `.output/chrome-mv3` with "Load unpacked" in Chrome,
 ## Release
 
 Notable changes go in `CHANGELOG.md` under Unreleased (`just log "..."`). `just ship X.Y.Z` bumps the version, moves the entries under the new version, tags, pushes and creates the GitHub release with the zips attached; `just ship X.Y.Z draft` creates it as a draft.
+
+## License
+
+[MIT](LICENSE)

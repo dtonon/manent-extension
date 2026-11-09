@@ -2,6 +2,7 @@
   "name": "manent-extension",
   "description": "Save web content as Manent notes",
   "private": true,
+  "license": "MIT",
   "version": "0.2.0",
   "type": "module",
   "scripts": {
