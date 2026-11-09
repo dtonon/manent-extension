@@ -4,6 +4,8 @@ Save what you find on the web straight into [Manent](https://github.com/dtonon/m
 
 A link, an article, a quote, an image or a video: one click and it lands among your Manent notes, encrypted on your device and synced through your own relays. Available for Chrome and Firefox.
 
+https://github.com/user-attachments/assets/9b568854-f806-4a6a-a181-653a5239b099
+
 ## Features
 
 - **Links** — Save the current page with its title, a comment and tags
