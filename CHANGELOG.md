@@ -4,6 +4,8 @@ Notable changes to the Manent extension. The format follows [Keep a Changelog](h
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-11-09
+
 The first release: save what you find on the web as Manent notes, signed with your Nostr key and published to your relays, from Chrome and Firefox.
 
 - Log in with an nsec or an ncryptsec (NIP-49), or sign with a NIP-07 extension
